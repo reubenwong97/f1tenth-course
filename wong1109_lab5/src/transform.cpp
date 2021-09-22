@@ -119,34 +119,51 @@ void updateTransform(vector<Correspondence> &corresponds,
 
     // fill in the values of the matrics
 
-    Eigen::Matrix4f M, W;
-    Eigen::MatrixXf g(4, 1);
-    M << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-    W << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    g << 0, 0, 0, 0;
-
-    // for each point in correspondence
-    for (int j = 0; j < corresponds.size(); ++j) {
-      Eigen::MatrixXf M_i(2, 4);
-      Eigen::Matrix2f C_i;
-      Eigen::Vector2f pi_i;
-      M_i << 1, 0, corresponds[j].pix, -corresponds[j].piy, 0, 1,
-          corresponds[j].piy, corresponds[j].pix;
-      C_i = corresponds[j].getNormalNorm() *
-            corresponds[j].getNormalNorm().transpose();
-      pi_i << corresponds[j].pix, corresponds[j].piy;
-
-      M += M_i.transpose() * C_i * M_i;
-    }
-
-    // Fill in the values for the matrices
     // Eigen::Matrix4f M, W;
     // Eigen::MatrixXf g(4, 1);
     // M << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
     // W << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
     // g << 0, 0, 0, 0;
 
+    // for each point in correspondence
+    // for (int j = 0; j < corresponds.size(); ++j) {
+    //   Eigen::MatrixXf M_i(2, 4);
+    //   Eigen::Matrix2f C_i;
+    //   Eigen::Vector2f pi_i;
+    //   M_i << 1, 0, corresponds[j].pix, -corresponds[j].piy, 0, 1,
+    //       corresponds[j].piy, corresponds[j].pix;
+    //   C_i = corresponds[j].getNormalNorm() *
+    //         corresponds[j].getNormalNorm().transpose();
+    //   pi_i << corresponds[j].getPiVec();
+
+    //   M += M_i.transpose() * C_i * M_i;
+    //   g += -2 * pi_i.transpose() * C_i * M_i;
+    // }
+
+    Eigen::MatrixXf M_i(2, 4);
+    Eigen::Matrix2f C_i;
+    Eigen::Vector2f pi_i;
+
+    // Fill in the values for the matrices
+    Eigen::Matrix4f M, W;
+    Eigen::MatrixXf g(4, 1);
+    M << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+    W << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
+    g << 0, 0, 0, 0;
+
+    for (int j = 0; j < corresponds.size(); ++j) {
+      M_i << 1, 0, corresponds[j].pix, -corresponds[j].piy, 0, 1,
+          corresponds[j].piy, corresponds[j].pix;
+      C_i = corresponds[j].getNormalNorm() *
+            corresponds[j].getNormalNorm().transpose();
+      pi_i << corresponds[j].getPiVec();
+
+      M += M_i.transpose() * C_i * M_i;
+      g += -2 * pi_i.transpose() * C_i * M_i;
+    }
+
     // Define sub-matrices A, B, D from M
+    Eigen::MatrixXf res = 2 * M + 2 * W;
     Eigen::Matrix2f A, B, D;
 
     // define S and S_A matrices from the matrices A B and D
