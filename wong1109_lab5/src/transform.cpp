@@ -165,10 +165,19 @@ void updateTransform(vector<Correspondence> &corresponds,
     // Define sub-matrices A, B, D from M
     Eigen::MatrixXf res = 2 * M + 2 * W;
     Eigen::Matrix2f A, B, D;
+    Eigen::Matrix2f I = Eigen::Matrix<float, 2, 2>::Identity();
+
+    A = res.block(0, 0, 2, 2);
+    B = res.block(0, 2, 2, 2);
+    D = res.block(2, 2, 2, 2);
+    D -= 2 * I;
 
     // define S and S_A matrices from the matrices A B and D
     Eigen::Matrix2f S;
     Eigen::Matrix2f S_A;
+
+    S = D - B.transpose() * A.inverse() * B;
+    S_A = S.determinant() * S.inverse();
 
     // find the coefficients of the quadratic function of lambda
     float pow_2;
