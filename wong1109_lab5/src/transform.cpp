@@ -3,6 +3,7 @@
 #include <Eigen/Geometry>
 #include <cmath>
 #include <complex>
+#include "geometry_msgs/Point.h"
 
 using namespace std;
 
@@ -117,46 +118,39 @@ void updateTransform(vector<Correspondence> &corresponds,
 
   for (int i = 0; i < number_iter; i++) {
 
-    // fill in the values of the matrics
-
-    // Eigen::Matrix4f M, W;
-    // Eigen::MatrixXf g(4, 1);
-    // M << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-    // W << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    // g << 0, 0, 0, 0;
-
-    // for each point in correspondence
-    // for (int j = 0; j < corresponds.size(); ++j) {
-    //   Eigen::MatrixXf M_i(2, 4);
-    //   Eigen::Matrix2f C_i;
-    //   Eigen::Vector2f pi_i;
-    //   M_i << 1, 0, corresponds[j].pix, -corresponds[j].piy, 0, 1,
-    //       corresponds[j].piy, corresponds[j].pix;
-    //   C_i = corresponds[j].getNormalNorm() *
-    //         corresponds[j].getNormalNorm().transpose();
-    //   pi_i << corresponds[j].getPiVec();
-
-    //   M += M_i.transpose() * C_i * M_i;
-    //   g += -2 * pi_i.transpose() * C_i * M_i;
-    // }
-
     Eigen::MatrixXf M_i(2, 4);
     Eigen::Matrix2f C_i;
     Eigen::Vector2f pi_i;
+    geometry_msgs::Point p_ji;
 
     // Fill in the values for the matrices
     Eigen::Matrix4f M, W;
     Eigen::MatrixXf g(4, 1);
-    M << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-    W << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-    g << 0, 0, 0, 0;
+
+    M << 0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 0;
+
+    W << 0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 1, 0,
+         0, 0, 0, 1;
+
+    g << 0,
+         0,
+         0,
+         0;
 
     for (int j = 0; j < corresponds.size(); ++j) {
-      M_i << 1, 0, corresponds[j].pix, -corresponds[j].piy, 0, 1,
-          corresponds[j].piy, corresponds[j].pix;
+      p_ji = corresponds[j].getPiGeo(); // Point
+      pi_i = corresponds[j].getPiVec(); // Vector pi
+
+      M_i << 1, 0, p_ji.x, -p_ji.y,
+             0, 1, p_ji.y, p_ji.x;
       C_i = corresponds[j].getNormalNorm() *
             corresponds[j].getNormalNorm().transpose();
-      pi_i << corresponds[j].getPiVec();
+
 
       M += M_i.transpose() * C_i * M_i;
       g += -2 * pi_i.transpose() * C_i * M_i;
@@ -222,7 +216,7 @@ void updateTransform(vector<Correspondence> &corresponds,
 
     // find the value of x which is the vector for translation and rotation
     Eigen::Vector4f x;
-    x = -(2 * M + 2 * lambda * W.inverse().transpose()) * g;
+    x = -(2 * M + 2 * lambda * W.inverse()).transpose() * g; // lecture formula instead of lab
     // Convert from x to new transform
 
     float theta = atan2(x(3), x(2));
