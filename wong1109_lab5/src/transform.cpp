@@ -93,10 +93,10 @@ float greatest_real_root(float a, float b, float c, float d, float e) {
     if (root.imag() == 0) {
       max_real_root = max(max_real_root, root.real());
     }
-    // std::cout<<"Max real root:" << max_real_root<<std::endl;
-
-    return max_real_root;
   }
+  // std::cout<<"Max real root:" << max_real_root<<std::endl;
+
+  return max_real_root;
 }
 
 void updateTransform(vector<Correspondence> &corresponds,
