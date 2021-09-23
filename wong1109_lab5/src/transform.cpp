@@ -184,13 +184,45 @@ void updateTransform(vector<Correspondence> &corresponds,
     float pow_1;
     float pow_0;
 
+    Eigen::MatrixXf interm_pow2(4, 4);
+    Eigen::MatrixXf interm_pow1(4, 4);
+    Eigen::MatrixXf interm_pow0(4, 4);
+
+    // compute matrix for pow 2 term
+    interm_pow2.topLeftCorner(2, 2) =
+        A.inverse() * B * B.transpose() * A.inverse().transpose();
+    interm_pow2.topRightCorner(2, 2) = -A.inverse() * B;
+    interm_pow2.bottomLeftCorner(2, 2) = -A.inverse() * B;
+    interm_pow2.bottomRightCorner(2, 2) = Eigen::MatrixXf::Identity(2, 2);
+
+    // compute matrix for pow 1 term
+    interm_pow1.topLeftCorner(2, 2) =
+        A.inverse() * B * S_A * B.transpose() * A.inverse().transpose();
+    interm_pow1.topRightCorner(2, 2) = -A.inverse() * B * S_A;
+    interm_pow1.bottomLeftCorner(2, 2) = -A.inverse() * B * S_A;
+    interm_pow1.bottomRightCorner(2, 2) = S_A;
+
+    // compute matrix for pow 0 term
+    interm_pow0.topLeftCorner(2, 2) = A.inverse() * B * S_A.transpose() * S_A *
+                                      B.transpose() * A.inverse().transpose();
+    interm_pow0.topRightCorner(2, 2) = -A.inverse() * B * S_A.transpose() * S_A;
+    interm_pow0.bottomLeftCorner(2, 2) =
+        -A.inverse() * B * S_A.transpose() * S_A;
+    interm_pow0.bottomRightCorner(2, 2) = S_A.transpose() * S_A;
+
+    // compute actual coefficients
+    pow_2 = 4 * (g.transpose() * interm_pow2 * g).coeff(0);
+    pow_1 = 4 * (g.transpose() * interm_pow1 * g).coeff(0);
+    pow_0 = (g.transpose() * interm_pow0 * g).coeff(0);
+
     // find the value of lambda by solving the equation formed. You can use the
     // greatest real root function
     float lambda;
+    lambda = greatest_real_root(0, 0, pow_2, pow_1, pow_0);
 
     // find the value of x which is the vector for translation and rotation
     Eigen::Vector4f x;
-
+    x = -(2 * M + 2 * lambda * W.inverse().transpose()) * g;
     // Convert from x to new transform
 
     float theta = atan2(x(3), x(2));
