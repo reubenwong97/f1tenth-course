@@ -1,9 +1,10 @@
 #include "wong1109_lab5/transform.h"
+#include "geometry_msgs/Point.h"
+#include "ros/console.h"
 #include "ros/ros.h"
 #include <Eigen/Geometry>
 #include <cmath>
 #include <complex>
-#include "geometry_msgs/Point.h"
 
 using namespace std;
 
@@ -114,6 +115,7 @@ void updateTransform(vector<Correspondence> &corresponds,
   // You can change the number of iterations here. More the number of
   // iterations, slower will be the convergence but more accurate will be the
   // results. You need to find the right balance.
+  ROS_INFO("Entering update transform");
   int number_iter = 1;
 
   for (int i = 0; i < number_iter; i++) {
@@ -126,40 +128,41 @@ void updateTransform(vector<Correspondence> &corresponds,
     // Fill in the values for the matrices
     Eigen::Matrix4f M, W;
     Eigen::MatrixXf g(4, 1);
+    // Eigen::MatrixXf g(1, 4);
 
-    M << 0, 0, 0, 0,
-         0, 0, 0, 0,
-         0, 0, 0, 0,
-         0, 0, 0, 0;
+    M << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
-    W << 0, 0, 0, 0,
-         0, 0, 0, 0,
-         0, 0, 1, 0,
-         0, 0, 0, 1;
+    W << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
 
-    g << 0,
-         0,
-         0,
-         0;
+    g << 0, 0, 0, 0;
 
+    ROS_INFO("Filling in M and g");
     for (int j = 0; j < corresponds.size(); ++j) {
       p_ji = corresponds[j].getPiGeo(); // Point
       pi_i = corresponds[j].getPiVec(); // Vector pi
 
-      M_i << 1, 0, p_ji.x, -p_ji.y,
-             0, 1, p_ji.y, p_ji.x;
+      M_i << 1, 0, p_ji.x, -p_ji.y, 0, 1, p_ji.y, p_ji.x;
       C_i = corresponds[j].getNormalNorm() *
             corresponds[j].getNormalNorm().transpose();
 
+      ROS_INFO("Matrx M_i is of size %ld", M_i.size());
+      ROS_INFO("Matrix C_i is of size %ld", C_i.size());
+      ROS_INFO("pi_i is of size %ld", pi_i.size());
 
       M += M_i.transpose() * C_i * M_i;
+      ROS_INFO("M is of size %ld", M.size());
+      ROS_INFO("pi_i has %ld rows and %ld columns", pi_i.rows(), pi_i.cols());
       g += -2 * pi_i.transpose() * C_i * M_i;
     }
+    ROS_INFO("Completed filling M and g");
 
     // Define sub-matrices A, B, D from M
+    ROS_INFO("Computing res matrix");
     Eigen::MatrixXf res = 2 * M + 2 * W;
     Eigen::Matrix2f A, B, D;
-    Eigen::Matrix2f I = Eigen::Matrix<float, 2, 2>::Identity();
+    Eigen::MatrixXf I = Eigen::MatrixXf::Identity(2, 2);
+    // Eigen::Matrix2f I = Eigen::Matrix<float, 2, 2>::Identity();
+    ROS_INFO("Computed res matrix, filling in A B and D");
 
     A = res.block(0, 0, 2, 2);
     B = res.block(0, 2, 2, 2);
@@ -170,8 +173,10 @@ void updateTransform(vector<Correspondence> &corresponds,
     Eigen::Matrix2f S;
     Eigen::Matrix2f S_A;
 
+    ROS_INFO("Computing S and S_A");
     S = D - B.transpose() * A.inverse() * B;
     S_A = S.determinant() * S.inverse();
+    ROS_INFO("Completed computation of S and S_A");
 
     // find the coefficients of the quadratic function of lambda
     float pow_2;
@@ -212,12 +217,16 @@ void updateTransform(vector<Correspondence> &corresponds,
     // find the value of lambda by solving the equation formed. You can use the
     // greatest real root function
     float lambda;
+    ROS_INFO("Computing lambda");
     lambda = greatest_real_root(0, 0, pow_2, pow_1, pow_0);
 
     // find the value of x which is the vector for translation and rotation
     Eigen::Vector4f x;
-    x = -(2 * M + 2 * lambda * W.inverse()).transpose() * g; // lecture formula instead of lab
+    // x = -(2 * M + 2 * lambda * W.inverse()).transpose() *
+    //     g;
+    // lecture formula instead of lab
     // Convert from x to new transform
+    x = -(2 * M + 2 * lambda * W).inverse().transpose() * g;
 
     float theta = atan2(x(3), x(2));
     curr_trans = Transform(x(0), x(1), theta);
