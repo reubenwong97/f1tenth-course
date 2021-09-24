@@ -117,7 +117,7 @@ void updateTransform(vector<Correspondence> &corresponds,
   // results. You need to find the right balance.
 
   // ROS_INFO("Entering update transform");
-  int number_iter = 1;
+  int number_iter = 5;
 
   for (int i = 0; i < number_iter; i++) {
 
@@ -238,6 +238,7 @@ void updateTransform(vector<Correspondence> &corresponds,
     // Convert from x to new transform
     // HACK: due to inconsistency, g becomes g.T
     x = -(2 * M + 2 * lambda * W).inverse().transpose() * g.transpose();
+    ROS_INFO("x is: %f %f %f %f", x(0), x(1), x(2), x(3));
     // ROS_INFO("x has been computed");
 
     float theta = atan2(x(3), x(2));
