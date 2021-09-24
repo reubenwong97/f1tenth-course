@@ -115,7 +115,8 @@ void updateTransform(vector<Correspondence> &corresponds,
   // You can change the number of iterations here. More the number of
   // iterations, slower will be the convergence but more accurate will be the
   // results. You need to find the right balance.
-  ROS_INFO("Entering update transform");
+
+  // ROS_INFO("Entering update transform");
   int number_iter = 1;
 
   for (int i = 0; i < number_iter; i++) {
@@ -127,8 +128,8 @@ void updateTransform(vector<Correspondence> &corresponds,
 
     // Fill in the values for the matrices
     Eigen::Matrix4f M, W;
-    Eigen::MatrixXf g(4, 1);
-    // Eigen::MatrixXf g(1, 4);
+    // Eigen::MatrixXf g(4, 1);
+    Eigen::MatrixXf g(1, 4);
 
     M << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
@@ -136,7 +137,7 @@ void updateTransform(vector<Correspondence> &corresponds,
 
     g << 0, 0, 0, 0;
 
-    ROS_INFO("Filling in M and g");
+    // ROS_INFO("Filling in M and g");
     for (int j = 0; j < corresponds.size(); ++j) {
       p_ji = corresponds[j].getPiGeo(); // Point
       pi_i = corresponds[j].getPiVec(); // Vector pi
@@ -145,24 +146,25 @@ void updateTransform(vector<Correspondence> &corresponds,
       C_i = corresponds[j].getNormalNorm() *
             corresponds[j].getNormalNorm().transpose();
 
-      ROS_INFO("Matrx M_i is of size %ld", M_i.size());
-      ROS_INFO("Matrix C_i is of size %ld", C_i.size());
-      ROS_INFO("pi_i is of size %ld", pi_i.size());
+      // ROS_INFO("Matrx M_i is of size %ld", M_i.size());
+      // ROS_INFO("Matrix C_i is of size %ld", C_i.size());
+      // ROS_INFO("pi_i is of size %ld", pi_i.size());
 
       M += M_i.transpose() * C_i * M_i;
-      ROS_INFO("M is of size %ld", M.size());
-      ROS_INFO("pi_i has %ld rows and %ld columns", pi_i.rows(), pi_i.cols());
+      // ROS_INFO("M is of size %ld", M.size());
+      // ROS_INFO("pi_i has %ld rows and %ld columns", pi_i.rows(),
+      // pi_i.cols());
       g += -2 * pi_i.transpose() * C_i * M_i;
     }
-    ROS_INFO("Completed filling M and g");
+    // ROS_INFO("Completed filling M and g");
 
     // Define sub-matrices A, B, D from M
-    ROS_INFO("Computing res matrix");
+    // ROS_INFO("Computing res matrix");
     Eigen::MatrixXf res = 2 * M + 2 * W;
     Eigen::Matrix2f A, B, D;
     Eigen::MatrixXf I = Eigen::MatrixXf::Identity(2, 2);
     // Eigen::Matrix2f I = Eigen::Matrix<float, 2, 2>::Identity();
-    ROS_INFO("Computed res matrix, filling in A B and D");
+    // ROS_INFO("Computed res matrix, filling in A B and D");
 
     A = res.block(0, 0, 2, 2);
     B = res.block(0, 2, 2, 2);
@@ -173,10 +175,10 @@ void updateTransform(vector<Correspondence> &corresponds,
     Eigen::Matrix2f S;
     Eigen::Matrix2f S_A;
 
-    ROS_INFO("Computing S and S_A");
+    // ROS_INFO("Computing S and S_A");
     S = D - B.transpose() * A.inverse() * B;
     S_A = S.determinant() * S.inverse();
-    ROS_INFO("Completed computation of S and S_A");
+    // ROS_INFO("Completed computation of S and S_A");
 
     // find the coefficients of the quadratic function of lambda
     float pow_2;
@@ -187,6 +189,7 @@ void updateTransform(vector<Correspondence> &corresponds,
     Eigen::MatrixXf interm_pow1(4, 4);
     Eigen::MatrixXf interm_pow0(4, 4);
 
+    // ROS_INFO("Computing intermediate matrices");
     // compute matrix for pow 2 term
     interm_pow2.topLeftCorner(2, 2) =
         A.inverse() * B * B.transpose() * A.inverse().transpose();
@@ -209,15 +212,22 @@ void updateTransform(vector<Correspondence> &corresponds,
         -A.inverse() * B * S_A.transpose() * S_A;
     interm_pow0.bottomRightCorner(2, 2) = S_A.transpose() * S_A;
 
+    // ROS_INFO("Intermediate matrices computed");
+
     // compute actual coefficients
-    pow_2 = 4 * (g.transpose() * interm_pow2 * g).coeff(0);
-    pow_1 = 4 * (g.transpose() * interm_pow1 * g).coeff(0);
-    pow_0 = (g.transpose() * interm_pow0 * g).coeff(0);
+    // pow_2 = 4 * (g.transpose() * interm_pow2 * g).coeff(0);
+    // pow_1 = 4 * (g.transpose() * interm_pow1 * g).coeff(0);
+    // pow_0 = (g.transpose() * interm_pow0 * g).coeff(0);
+
+    // HACK: annoying, have to flip the transposes around
+    pow_2 = 4 * (g * interm_pow2 * g.transpose()).coeff(0);
+    pow_1 = 4 * (g * interm_pow1 * g.transpose()).coeff(0);
+    pow_0 = (g * interm_pow0 * g.transpose()).coeff(0);
 
     // find the value of lambda by solving the equation formed. You can use the
     // greatest real root function
     float lambda;
-    ROS_INFO("Computing lambda");
+    // ROS_INFO("Computing lambda");
     lambda = greatest_real_root(0, 0, pow_2, pow_1, pow_0);
 
     // find the value of x which is the vector for translation and rotation
@@ -226,7 +236,9 @@ void updateTransform(vector<Correspondence> &corresponds,
     //     g;
     // lecture formula instead of lab
     // Convert from x to new transform
-    x = -(2 * M + 2 * lambda * W).inverse().transpose() * g;
+    // HACK: due to inconsistency, g becomes g.T
+    x = -(2 * M + 2 * lambda * W).inverse().transpose() * g.transpose();
+    // ROS_INFO("x has been computed");
 
     float theta = atan2(x(3), x(2));
     curr_trans = Transform(x(0), x(1), theta);
