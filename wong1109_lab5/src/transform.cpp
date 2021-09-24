@@ -128,15 +128,15 @@ void updateTransform(vector<Correspondence> &corresponds,
 
     // Fill in the values for the matrices
     Eigen::Matrix4f M, W;
-    // Eigen::MatrixXf g(4, 1);
-    Eigen::MatrixXf g(1, 4);
+    Eigen::MatrixXf g(4, 1);
+    Eigen::MatrixXf g_t(1, 4);
 
     M << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     W << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
 
     g << 0, 0, 0, 0;
-
+    g_t << 0, 0, 0, 0;
     // ROS_INFO("Filling in M and g");
     for (int j = 0; j < corresponds.size(); ++j) {
       p_ji = corresponds[j].getPiGeo(); // Point
@@ -154,13 +154,14 @@ void updateTransform(vector<Correspondence> &corresponds,
       // ROS_INFO("M is of size %ld", M.size());
       // ROS_INFO("pi_i has %ld rows and %ld columns", pi_i.rows(),
       // pi_i.cols());
-      g += -2 * pi_i.transpose() * C_i * M_i;
+      g_t += -2 * pi_i.transpose() * C_i * M_i;
     }
     // ROS_INFO("Completed filling M and g");
 
     // Define sub-matrices A, B, D from M
     // ROS_INFO("Computing res matrix");
     Eigen::MatrixXf res = 2 * M + 2 * W;
+    g = g_t.transpose();
     Eigen::Matrix2f A, B, D;
     Eigen::MatrixXf I = Eigen::MatrixXf::Identity(2, 2);
     // Eigen::Matrix2f I = Eigen::Matrix<float, 2, 2>::Identity();
@@ -215,14 +216,14 @@ void updateTransform(vector<Correspondence> &corresponds,
     // ROS_INFO("Intermediate matrices computed");
 
     // compute actual coefficients
-    // pow_2 = 4 * (g.transpose() * interm_pow2 * g).coeff(0);
-    // pow_1 = 4 * (g.transpose() * interm_pow1 * g).coeff(0);
-    // pow_0 = (g.transpose() * interm_pow0 * g).coeff(0);
+    pow_2 = 4 * (g.transpose() * interm_pow2 * g).coeff(0);
+    pow_1 = 4 * (g.transpose() * interm_pow1 * g).coeff(0);
+    pow_0 = (g.transpose() * interm_pow0 * g).coeff(0);
 
     // HACK: annoying, have to flip the transposes around
-    pow_2 = 4 * (g * interm_pow2 * g.transpose()).coeff(0);
-    pow_1 = 4 * (g * interm_pow1 * g.transpose()).coeff(0);
-    pow_0 = (g * interm_pow0 * g.transpose()).coeff(0);
+    // pow_2 = 4 * (g * interm_pow2 * g.transpose()).coeff(0);
+    // pow_1 = 4 * (g * interm_pow1 * g.transpose()).coeff(0);
+    // pow_0 = (g * interm_pow0 * g.transpose()).coeff(0);
 
     // find the value of lambda by solving the equation formed. You can use the
     // greatest real root function
