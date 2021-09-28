@@ -8,6 +8,10 @@
 
 using namespace std;
 
+void printMatrixShape(const Eigen::MatrixXf &mat) {
+  cout << "shape: (" << mat.rows() << "," << mat.cols() << ")" << endl;
+}
+
 void transformPoints(const vector<Point> &points, Transform &t,
                      vector<Point> &transformed_points) {
   transformed_points.clear();
@@ -117,14 +121,14 @@ void updateTransform(vector<Correspondence> &corresponds,
   // results. You need to find the right balance.
 
   // ROS_INFO("Entering update transform");
-  int number_iter = 3;
+  int number_iter = 2;
 
   for (int i = 0; i < number_iter; i++) {
 
     Eigen::MatrixXf M_i(2, 4);
     Eigen::Matrix2f C_i;
     Eigen::Vector2f pi_i;
-    geometry_msgs::Point p_ji;
+    Eigen::Vector2f n_i;
 
     // Fill in the values for the matrices
     Eigen::Matrix4f M, W;
@@ -137,31 +141,23 @@ void updateTransform(vector<Correspondence> &corresponds,
 
     g << 0, 0, 0, 0;
     g_t << 0, 0, 0, 0;
+
     // ROS_INFO("Filling in M and g");
-    for (int j = 0; j < corresponds.size(); ++j) {
-      p_ji = corresponds[j].getPiGeo(); // Point
-      pi_i = corresponds[j].getPiVec(); // Vector pi
-
-      M_i << 1, 0, p_ji.x, -p_ji.y, 0, 1, p_ji.y, p_ji.x;
-      C_i = corresponds[j].getNormalNorm() *
-            corresponds[j].getNormalNorm().transpose();
-
-      // ROS_INFO("Matrx M_i is of size %ld", M_i.size());
-      // ROS_INFO("Matrix C_i is of size %ld", C_i.size());
-      // ROS_INFO("pi_i is of size %ld", pi_i.size());
+    for (Correspondence c : corresponds) {
+      n_i = c.getNormalNorm();
+      M_i << 1, 0, c.p->getX(), -c.p->getY(), 0, 1, c.p->getY(), c.p->getX();
+      C_i << n_i * n_i.transpose();
+      pi_i << c.pj1->getX(), c.pj1->getY();
 
       M += M_i.transpose() * C_i * M_i;
-      // ROS_INFO("M is of size %ld", M.size());
-      // ROS_INFO("pi_i has %ld rows and %ld columns", pi_i.rows(),
-      // pi_i.cols());
-      g_t += -2 * pi_i.transpose() * C_i * M_i;
+      g_t -= 2 * pi_i.transpose() * C_i * M_i;
     }
     // ROS_INFO("Completed filling M and g");
 
     // Define sub-matrices A, B, D from M
     // ROS_INFO("Computing res matrix");
     Eigen::MatrixXf res = 2 * M + 2 * W;
-    g = g_t.transpose();
+    g << g_t.transpose();
     // ROS_INFO("g has shape (%ld, %ld)", g.rows(), g.cols());
     Eigen::Matrix2f A, B, D;
     Eigen::MatrixXf I = Eigen::MatrixXf::Identity(2, 2);
@@ -178,8 +174,8 @@ void updateTransform(vector<Correspondence> &corresponds,
     Eigen::Matrix2f S_A;
 
     // ROS_INFO("Computing S and S_A");
-    S = D - B.transpose() * A.inverse() * B;
-    S_A = S.determinant() * S.inverse();
+    S << D - B.transpose() * A.inverse() * B;
+    S_A << S.determinant() * S.inverse();
     // ROS_INFO("Completed computation of S and S_A");
 
     // find the coefficients of the quadratic function of lambda
@@ -217,9 +213,9 @@ void updateTransform(vector<Correspondence> &corresponds,
     // ROS_INFO("Intermediate matrices computed");
 
     // compute actual coefficients
-    pow_2 = 4 * (g.transpose() * interm_pow2 * g).coeff(0);
-    pow_1 = 4 * (g.transpose() * interm_pow1 * g).coeff(0);
-    pow_0 = (g.transpose() * interm_pow0 * g).coeff(0);
+    pow_2 = 4 * (g.transpose() * interm_pow2 * g)(0);
+    pow_1 = 4 * (g.transpose() * interm_pow1 * g)(0);
+    pow_0 = (g.transpose() * interm_pow0 * g)(0);
 
     // HACK: annoying, have to flip the transposes around
     // pow_2 = 4 * (g * interm_pow2 * g.transpose()).coeff(0);
@@ -231,6 +227,12 @@ void updateTransform(vector<Correspondence> &corresponds,
     float lambda;
     // ROS_INFO("Computing lambda");
     lambda = greatest_real_root(0, 0, pow_2, pow_1, pow_0);
+    cout << "M: " << M << endl;
+    cout << "g: " << g << endl;
+    cout << "pow2: " << pow_2 << endl;
+    cout << "pow1: " << pow_1 << endl;
+    cout << "pow0: " << pow_0 << endl;
+    cout << "lambda: " << lambda << endl;
 
     // find the value of x which is the vector for translation and rotation
     Eigen::Vector4f x;
@@ -239,8 +241,8 @@ void updateTransform(vector<Correspondence> &corresponds,
     // lecture formula instead of lab
     // Convert from x to new transform
     // HACK: due to inconsistency, g becomes g.T
-    x = -(2 * M + 2 * lambda * W).inverse().transpose() * g;
-    ROS_INFO("x is: %f %f %f %f", x(0), x(1), x(2), x(3));
+    x = -((2 * M + 2 * lambda * W).inverse()).transpose() * g;
+    // ROS_INFO("x is: %f %f %f %f", x(0), x(1), x(2), x(3));
     // ROS_INFO("x has been computed");
 
     float theta = atan2(x(3), x(2));
