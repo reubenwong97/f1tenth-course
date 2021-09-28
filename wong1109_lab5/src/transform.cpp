@@ -201,14 +201,14 @@ void updateTransform(vector<Correspondence> &corresponds,
     interm_pow2.topLeftCorner(2, 2) =
         A.inverse() * B * B.transpose() * A.inverse().transpose();
     interm_pow2.topRightCorner(2, 2) = -A.inverse() * B;
-    interm_pow2.bottomLeftCorner(2, 2) = -A.inverse() * B;
+    interm_pow2.bottomLeftCorner(2, 2) = -(A.inverse() * B).transpose();
     interm_pow2.bottomRightCorner(2, 2) = Eigen::MatrixXf::Identity(2, 2);
 
     // compute matrix for pow 1 term
     interm_pow1.topLeftCorner(2, 2) =
         A.inverse() * B * S_A * B.transpose() * A.inverse().transpose();
     interm_pow1.topRightCorner(2, 2) = -A.inverse() * B * S_A;
-    interm_pow1.bottomLeftCorner(2, 2) = -A.inverse() * B * S_A;
+    interm_pow1.bottomLeftCorner(2, 2) = -(A.inverse() * B * S_A).transpose();
     interm_pow1.bottomRightCorner(2, 2) = S_A;
 
     // compute matrix for pow 0 term
@@ -216,7 +216,7 @@ void updateTransform(vector<Correspondence> &corresponds,
                                       B.transpose() * A.inverse().transpose();
     interm_pow0.topRightCorner(2, 2) = -A.inverse() * B * S_A.transpose() * S_A;
     interm_pow0.bottomLeftCorner(2, 2) =
-        -A.inverse() * B * S_A.transpose() * S_A;
+        -(A.inverse() * B * S_A.transpose() * S_A).transpose();
     interm_pow0.bottomRightCorner(2, 2) = S_A.transpose() * S_A;
 
     // ROS_INFO("Intermediate matrices computed");
