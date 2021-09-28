@@ -168,6 +168,10 @@ void updateTransform(vector<Correspondence> &corresponds,
     B = res.block(0, 2, 2, 2);
     D = res.block(2, 2, 2, 2);
     D -= 2 * I;
+    cout << "res: " << res << endl;
+    cout << "A: " << A << endl;
+    cout << "B: " << B << endl;
+    cout << "D: " << D << endl;
 
     // define S and S_A matrices from the matrices A B and D
     Eigen::Matrix2f S;
