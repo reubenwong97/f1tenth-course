@@ -132,15 +132,16 @@ void updateTransform(vector<Correspondence> &corresponds,
 
     // Fill in the values for the matrices
     Eigen::Matrix4f M, W;
-    Eigen::MatrixXf g(4, 1);
-    Eigen::MatrixXf g_t(1, 4);
+    // Eigen::MatrixXf g(4, 1);
+    Eigen::MatrixXf g(1, 4);
+    // Eigen::MatrixXf g_t(1, 4);
 
     M << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     W << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
 
     g << 0, 0, 0, 0;
-    g_t << 0, 0, 0, 0;
+    // g_t << 0, 0, 0, 0;
 
     // ROS_INFO("Filling in M and g");
     for (Correspondence c : corresponds) {
@@ -150,14 +151,14 @@ void updateTransform(vector<Correspondence> &corresponds,
       pi_i << c.pj1->getX(), c.pj1->getY();
 
       M += M_i.transpose() * C_i * M_i;
-      g_t -= 2 * pi_i.transpose() * C_i * M_i;
+      g -= 2 * pi_i.transpose() * C_i * M_i;
     }
     // ROS_INFO("Completed filling M and g");
 
     // Define sub-matrices A, B, D from M
     // ROS_INFO("Computing res matrix");
     Eigen::MatrixXf res = 2 * M + 2 * W;
-    g << g_t.transpose();
+    // g << g_t.transpose();
     // ROS_INFO("g has shape (%ld, %ld)", g.rows(), g.cols());
     Eigen::Matrix2f A, B, D;
     Eigen::MatrixXf I = Eigen::MatrixXf::Identity(2, 2);
@@ -217,14 +218,14 @@ void updateTransform(vector<Correspondence> &corresponds,
     // ROS_INFO("Intermediate matrices computed");
 
     // compute actual coefficients
-    pow_2 = 4 * (g.transpose() * interm_pow2 * g)(0);
-    pow_1 = 4 * (g.transpose() * interm_pow1 * g)(0);
-    pow_0 = (g.transpose() * interm_pow0 * g)(0);
+    // pow_2 = 4 * (g.transpose() * interm_pow2 * g)(0);
+    // pow_1 = 4 * (g.transpose() * interm_pow1 * g)(0);
+    // pow_0 = (g.transpose() * interm_pow0 * g)(0);
 
     // HACK: annoying, have to flip the transposes around
-    // pow_2 = 4 * (g * interm_pow2 * g.transpose()).coeff(0);
-    // pow_1 = 4 * (g * interm_pow1 * g.transpose()).coeff(0);
-    // pow_0 = (g * interm_pow0 * g.transpose()).coeff(0);
+    pow_2 = 4 * (g * interm_pow2 * g.transpose())(0);
+    pow_1 = 4 * (g * interm_pow1 * g.transpose())(0);
+    pow_0 = (g * interm_pow0 * g.transpose())(0);
 
     // find the value of lambda by solving the equation formed. You can use the
     // greatest real root function
@@ -245,7 +246,7 @@ void updateTransform(vector<Correspondence> &corresponds,
     // lecture formula instead of lab
     // Convert from x to new transform
     // HACK: due to inconsistency, g becomes g.T
-    x = -((2 * M + 2 * lambda * W).inverse()).transpose() * g;
+    x = -((2 * M + 2 * lambda * W).inverse()).transpose() * g.transpose();
     // ROS_INFO("x is: %f %f %f %f", x(0), x(1), x(2), x(3));
     // ROS_INFO("x has been computed");
 
