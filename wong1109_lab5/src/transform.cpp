@@ -202,7 +202,7 @@ void updateTransform(vector<Correspondence> &corresponds,
         A.inverse() * B * B.transpose() * A.inverse().transpose();
     interm_pow2.topRightCorner(2, 2) = -A.inverse() * B;
     interm_pow2.bottomLeftCorner(2, 2) = -(A.inverse() * B).transpose();
-    interm_pow2.bottomRightCorner(2, 2) = Eigen::MatrixXf::Identity(2, 2);
+    interm_pow2.bottomRightCorner(2, 2).setIdentity(2, 2);
 
     // compute matrix for pow 1 term
     interm_pow1.topLeftCorner(2, 2) =
