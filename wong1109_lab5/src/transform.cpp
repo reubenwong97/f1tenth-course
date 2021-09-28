@@ -188,9 +188,13 @@ void updateTransform(vector<Correspondence> &corresponds,
     float pow_1;
     float pow_0;
 
-    Eigen::MatrixXf interm_pow2(4, 4);
-    Eigen::MatrixXf interm_pow1(4, 4);
-    Eigen::MatrixXf interm_pow0(4, 4);
+    Eigen::Matrix4f interm_pow2, interm_pow1, interm_pow0;
+    // Eigen::MatrixXf interm_pow2(4, 4);
+    // Eigen::MatrixXf interm_pow1(4, 4);
+    // Eigen::MatrixXf interm_pow0(4, 4);
+    interm_pow2.setZero(4, 4);
+    interm_pow1.setZero(4, 4);
+    interm_pow0.setZero(4, 4);
 
     // ROS_INFO("Computing intermediate matrices");
     // compute matrix for pow 2 term
