@@ -153,6 +153,9 @@ void updateTransform(vector<Correspondence> &corresponds,
       M += M_i.transpose() * C_i * M_i;
       g -= 2 * pi_i.transpose() * C_i * M_i;
     }
+    // Normalize matrices
+    M /= corresponds.size();
+    g /= corresponds.size();
     // ROS_INFO("Completed filling M and g");
 
     // Define sub-matrices A, B, D from M
