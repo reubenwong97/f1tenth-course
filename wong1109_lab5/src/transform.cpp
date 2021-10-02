@@ -172,10 +172,10 @@ void updateTransform(vector<Correspondence> &corresponds,
     B = res.block(0, 2, 2, 2);
     D = res.block(2, 2, 2, 2);
     D -= 2 * I;
-    cout << "res: " << res << endl;
-    cout << "A: " << A << endl;
-    cout << "B: " << B << endl;
-    cout << "D: " << D << endl;
+    // cout << "res: " << res << endl;
+    // cout << "A: " << A << endl;
+    // cout << "B: " << B << endl;
+    // cout << "D: " << D << endl;
 
     // define S and S_A matrices from the matrices A B and D
     Eigen::Matrix2f S;
@@ -229,22 +229,36 @@ void updateTransform(vector<Correspondence> &corresponds,
     // pow_1 = 4 * (g.transpose() * interm_pow1 * g)(0);
     // pow_0 = (g.transpose() * interm_pow0 * g)(0);
 
+    // Experiment with the full eqn
+    float s1, s2, s3, s4;
+    s1 = S(0, 0);
+    s2 = S(0, 1);
+    s3 = S(1, 0);
+    s4 = S(1, 1);
     // HACK: annoying, have to flip the transposes around
-    pow_2 = 4 * (g * interm_pow2 * g.transpose())(0);
-    pow_1 = 4 * (g * interm_pow1 * g.transpose())(0);
-    pow_0 = (g * interm_pow0 * g.transpose())(0);
+    // pow_2 = 4 * (g * interm_pow2 * g.transpose())(0);
+    // pow_1 = 4 * (g * interm_pow1 * g.transpose())(0);
+    // pow_0 = (g * interm_pow0 * g.transpose())(0);
+    float pow_4 = -1;
+    float pow_3 = -2 * (s1 + s4);
+    pow_2 = 4 * (g * interm_pow2 * g.transpose())(0) - s1 * s1 - 4 * s1 * s4 -
+            s4 * s4 + s2 * s3;
+    pow_1 = 4 * (g * interm_pow1 * g.transpose())(0) - 2 * s1 * s1 * s4 -
+            2 * s1 * s4 * s4 + 2 * s1 * s2 * s3 + 2 * s2 * s3 * s4;
+    pow_0 = (g * interm_pow0 * g.transpose())(0) - s1 * s1 * s4 * s4 +
+            2 * s1 * s2 * s3 * s4 - s2 * s2 * s3 * s3;
 
     // find the value of lambda by solving the equation formed. You can use the
     // greatest real root function
     float lambda;
     // ROS_INFO("Computing lambda");
-    lambda = greatest_real_root(0, 0, pow_2, pow_1, pow_0);
-    cout << "M: " << M << endl;
-    cout << "g: " << g << endl;
-    cout << "pow2: " << pow_2 << endl;
-    cout << "pow1: " << pow_1 << endl;
-    cout << "pow0: " << pow_0 << endl;
-    cout << "lambda: " << lambda << endl;
+    lambda = greatest_real_root(pow_4, pow_3, pow_2, pow_1, pow_0);
+    // cout << "M: " << M << endl;
+    // cout << "g: " << g << endl;
+    // cout << "pow2: " << pow_2 << endl;
+    // cout << "pow1: " << pow_1 << endl;
+    // cout << "pow0: " << pow_0 << endl;
+    // cout << "lambda: " << lambda << endl;
 
     // find the value of x which is the vector for translation and rotation
     Eigen::Vector4f x;
