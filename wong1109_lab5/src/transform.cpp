@@ -95,8 +95,6 @@ float greatest_real_root(float a, float b, float c, float d, float e) {
   float max_real_root = 0.f;
 
   for (complex<float> root : roots) {
-    cout << "Real parts: " << root.real() << endl;
-    cout << "Img parts: " << root.imag() << endl;
     if (root.imag() == 0) {
       max_real_root = max(max_real_root, root.real());
     }
@@ -148,7 +146,7 @@ void updateTransform(vector<Correspondence> &corresponds,
     // ROS_INFO("Filling in M and g");
     for (Correspondence c : corresponds) {
       n_i = c.getNormalNorm();
-      M_i << 1, 0, c.po->getX(), -c.po->getY(), 0, 1, c.po->getY(), c.po->getX();
+      M_i << 1, 0, c.p->getX(), -c.p->getY(), 0, 1, c.p->getY(), c.p->getX();
       C_i << n_i * n_i.transpose();
       pi_i << c.pj1->getX(), c.pj1->getY();
 
@@ -233,26 +231,11 @@ void updateTransform(vector<Correspondence> &corresponds,
     pow_1 = 4 * (g * interm_pow1 * g.transpose())(0);
     pow_0 = (g * interm_pow0 * g.transpose())(0);
 
-    float a_1, b_1, c_1, d_1;
-
-    a_1 = S(0,0);
-    b_1 = S(0,1);
-    c_1 = S(1,0);
-    d_1 = S(1,1);
-
-    float A_1,B_1,C_1,D_1,E_1;
-
-    A_1 = 16;
-    B_1 = 16*(a_1+d_1);
-    C_1 = 16*a_1*d_1 + 4*a_1*a_1 + 4*d_1*d_1 - 8*c_1*b_1 - pow_2;
-    D_1 = -4*a_1*b_1*c_1 - 4*b_1*c_1*d_1 + 4*a_1*a_1*d_1 + 4*a_1*d_1*d_1 - pow_1;
-    E_1 = a_1*a_1*d_1*d_1 - 2*a_1*b_1*c_1*d_1 + b_1*b_1*c_1*c_1 - pow_0;
-
     // find the value of lambda by solving the equation formed. You can use the
     // greatest real root function
     float lambda;
     // ROS_INFO("Computing lambda");
-    lambda = greatest_real_root(A_1, B_1, C_1, D_1, E_1);
+    lambda = greatest_real_root(0, 0, pow_2, pow_1, pow_0);
     cout << "M: " << M << endl;
     cout << "g: " << g << endl;
     cout << "pow2: " << pow_2 << endl;
