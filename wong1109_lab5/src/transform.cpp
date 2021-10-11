@@ -8,6 +8,10 @@
 
 using namespace std;
 
+void printMatrixShape(const Eigen::MatrixXf &mat) {
+  cout << "shape: (" << mat.rows() << "," << mat.cols() << ")" << endl;
+}
+
 void transformPoints(const vector<Point> &points, Transform &t,
                      vector<Point> &transformed_points) {
   transformed_points.clear();
@@ -91,6 +95,7 @@ float greatest_real_root(float a, float b, float c, float d, float e) {
   float max_real_root = 0.f;
 
   for (complex<float> root : roots) {
+    cout << "Real roots: " << root << endl;
     if (root.imag() == 0) {
       max_real_root = max(max_real_root, root.real());
     }
@@ -117,50 +122,45 @@ void updateTransform(vector<Correspondence> &corresponds,
   // results. You need to find the right balance.
 
   // ROS_INFO("Entering update transform");
-  int number_iter = 5;
+  int number_iter = 2;
 
   for (int i = 0; i < number_iter; i++) {
 
     Eigen::MatrixXf M_i(2, 4);
     Eigen::Matrix2f C_i;
     Eigen::Vector2f pi_i;
-    geometry_msgs::Point p_ji;
+    Eigen::Vector2f n_i;
 
     // Fill in the values for the matrices
     Eigen::Matrix4f M, W;
     // Eigen::MatrixXf g(4, 1);
     Eigen::MatrixXf g(1, 4);
+    // Eigen::MatrixXf g_t(1, 4);
 
     M << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
     W << 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
 
     g << 0, 0, 0, 0;
+    // g_t << 0, 0, 0, 0;
 
     // ROS_INFO("Filling in M and g");
-    for (int j = 0; j < corresponds.size(); ++j) {
-      p_ji = corresponds[j].getPiGeo(); // Point
-      pi_i = corresponds[j].getPiVec(); // Vector pi
-
-      M_i << 1, 0, p_ji.x, -p_ji.y, 0, 1, p_ji.y, p_ji.x;
-      C_i = corresponds[j].getNormalNorm() *
-            corresponds[j].getNormalNorm().transpose();
-
-      // ROS_INFO("Matrx M_i is of size %ld", M_i.size());
-      // ROS_INFO("Matrix C_i is of size %ld", C_i.size());
-      // ROS_INFO("pi_i is of size %ld", pi_i.size());
+    for (Correspondence c : corresponds) {
+      n_i = c.getNormalNorm();
+      M_i << 1, 0, c.p->getX(), -c.p->getY(), 0, 1, c.p->getY(), c.p->getX();
+      C_i << n_i * n_i.transpose();
+      pi_i << c.pj1->getX(), c.pj1->getY();
 
       M += M_i.transpose() * C_i * M_i;
-      // ROS_INFO("M is of size %ld", M.size());
-      // ROS_INFO("pi_i has %ld rows and %ld columns", pi_i.rows(),
-      // pi_i.cols());
-      g += -2 * pi_i.transpose() * C_i * M_i;
+      g -= 2 * pi_i.transpose() * C_i * M_i;
     }
     // ROS_INFO("Completed filling M and g");
 
     // Define sub-matrices A, B, D from M
     // ROS_INFO("Computing res matrix");
     Eigen::MatrixXf res = 2 * M + 2 * W;
+    // g << g_t.transpose();
+    // ROS_INFO("g has shape (%ld, %ld)", g.rows(), g.cols());
     Eigen::Matrix2f A, B, D;
     Eigen::MatrixXf I = Eigen::MatrixXf::Identity(2, 2);
     // Eigen::Matrix2f I = Eigen::Matrix<float, 2, 2>::Identity();
@@ -170,14 +170,18 @@ void updateTransform(vector<Correspondence> &corresponds,
     B = res.block(0, 2, 2, 2);
     D = res.block(2, 2, 2, 2);
     D -= 2 * I;
+    cout << "res: " << res << endl;
+    cout << "A: " << A << endl;
+    cout << "B: " << B << endl;
+    cout << "D: " << D << endl;
 
     // define S and S_A matrices from the matrices A B and D
     Eigen::Matrix2f S;
     Eigen::Matrix2f S_A;
 
     // ROS_INFO("Computing S and S_A");
-    S = D - B.transpose() * A.inverse() * B;
-    S_A = S.determinant() * S.inverse();
+    S << D - B.transpose() * A.inverse() * B;
+    S_A << S.determinant() * S.inverse();
     // ROS_INFO("Completed computation of S and S_A");
 
     // find the coefficients of the quadratic function of lambda
@@ -185,23 +189,27 @@ void updateTransform(vector<Correspondence> &corresponds,
     float pow_1;
     float pow_0;
 
-    Eigen::MatrixXf interm_pow2(4, 4);
-    Eigen::MatrixXf interm_pow1(4, 4);
-    Eigen::MatrixXf interm_pow0(4, 4);
+    Eigen::Matrix4f interm_pow2, interm_pow1, interm_pow0;
+    // Eigen::MatrixXf interm_pow2(4, 4);
+    // Eigen::MatrixXf interm_pow1(4, 4);
+    // Eigen::MatrixXf interm_pow0(4, 4);
+    interm_pow2.setZero(4, 4);
+    interm_pow1.setZero(4, 4);
+    interm_pow0.setZero(4, 4);
 
     // ROS_INFO("Computing intermediate matrices");
     // compute matrix for pow 2 term
     interm_pow2.topLeftCorner(2, 2) =
         A.inverse() * B * B.transpose() * A.inverse().transpose();
     interm_pow2.topRightCorner(2, 2) = -A.inverse() * B;
-    interm_pow2.bottomLeftCorner(2, 2) = -A.inverse() * B;
-    interm_pow2.bottomRightCorner(2, 2) = Eigen::MatrixXf::Identity(2, 2);
+    interm_pow2.bottomLeftCorner(2, 2) = -(A.inverse() * B).transpose();
+    interm_pow2.bottomRightCorner(2, 2).setIdentity();
 
     // compute matrix for pow 1 term
     interm_pow1.topLeftCorner(2, 2) =
         A.inverse() * B * S_A * B.transpose() * A.inverse().transpose();
     interm_pow1.topRightCorner(2, 2) = -A.inverse() * B * S_A;
-    interm_pow1.bottomLeftCorner(2, 2) = -A.inverse() * B * S_A;
+    interm_pow1.bottomLeftCorner(2, 2) = -(A.inverse() * B * S_A).transpose();
     interm_pow1.bottomRightCorner(2, 2) = S_A;
 
     // compute matrix for pow 0 term
@@ -209,26 +217,47 @@ void updateTransform(vector<Correspondence> &corresponds,
                                       B.transpose() * A.inverse().transpose();
     interm_pow0.topRightCorner(2, 2) = -A.inverse() * B * S_A.transpose() * S_A;
     interm_pow0.bottomLeftCorner(2, 2) =
-        -A.inverse() * B * S_A.transpose() * S_A;
+        -(A.inverse() * B * S_A.transpose() * S_A).transpose();
     interm_pow0.bottomRightCorner(2, 2) = S_A.transpose() * S_A;
 
     // ROS_INFO("Intermediate matrices computed");
 
     // compute actual coefficients
-    // pow_2 = 4 * (g.transpose() * interm_pow2 * g).coeff(0);
-    // pow_1 = 4 * (g.transpose() * interm_pow1 * g).coeff(0);
-    // pow_0 = (g.transpose() * interm_pow0 * g).coeff(0);
+    // pow_2 = 4 * (g.transpose() * interm_pow2 * g)(0);
+    // pow_1 = 4 * (g.transpose() * interm_pow1 * g)(0);
+    // pow_0 = (g.transpose() * interm_pow0 * g)(0);
 
     // HACK: annoying, have to flip the transposes around
-    pow_2 = 4 * (g * interm_pow2 * g.transpose()).coeff(0);
-    pow_1 = 4 * (g * interm_pow1 * g.transpose()).coeff(0);
-    pow_0 = (g * interm_pow0 * g.transpose()).coeff(0);
+    pow_2 = 4 * (g * interm_pow2 * g.transpose())(0);
+    pow_1 = 4 * (g * interm_pow1 * g.transpose())(0);
+    pow_0 = (g * interm_pow0 * g.transpose())(0);
+
+    float a_1, b_1, c_1, d_1;
+
+    a_1 = S(0,0);
+    b_1 = S(0,1);
+    c_1 = S(1,0);
+    d_1 = S(1,1);
+
+    float A_1,B_1,C_1,D_1,E_1;
+
+    A_1 = 16;
+    B_1 = 16*(a_1+d_1);
+    C_1 = 16*a_1*d_1 + 4*a_1*a_1 + 4*d_1*d_1 - 8*c_1*b_1 - pow_2;
+    D_1 = -4*a_1*b_1*c_1 - 4*b_1*c_1*d_1 + 4*a_1*a_1*d_1 + 4*a_1*d_1*d_1 - pow_1;
+    E_1 = a_1*a_1*d_1*d_1 - 2*a_1*b_1*c_1*d_1 + b_1*b_1*c_1*c_1 - pow_0;
 
     // find the value of lambda by solving the equation formed. You can use the
     // greatest real root function
     float lambda;
     // ROS_INFO("Computing lambda");
-    lambda = greatest_real_root(0, 0, pow_2, pow_1, pow_0);
+    lambda = greatest_real_root(A_1, B_1, C_1, D_1, E_1);
+    cout << "M: " << M << endl;
+    cout << "g: " << g << endl;
+    cout << "pow2: " << pow_2 << endl;
+    cout << "pow1: " << pow_1 << endl;
+    cout << "pow0: " << pow_0 << endl;
+    cout << "lambda: " << lambda << endl;
 
     // find the value of x which is the vector for translation and rotation
     Eigen::Vector4f x;
@@ -237,8 +266,8 @@ void updateTransform(vector<Correspondence> &corresponds,
     // lecture formula instead of lab
     // Convert from x to new transform
     // HACK: due to inconsistency, g becomes g.T
-    x = -(2 * M + 2 * lambda * W).inverse().transpose() * g.transpose();
-    ROS_INFO("x is: %f %f %f %f", x(0), x(1), x(2), x(3));
+    x = -((2 * M + 2 * lambda * W).inverse()).transpose() * g.transpose();
+    // ROS_INFO("x is: %f %f %f %f", x(0), x(1), x(2), x(3));
     // ROS_INFO("x has been computed");
 
     float theta = atan2(x(3), x(2));
