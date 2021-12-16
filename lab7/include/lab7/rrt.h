@@ -16,6 +16,7 @@
 #include <ackermann_msgs/AckermannDriveStamped.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <tf/transform_listener.h>
+#include <visualization_msgs/Marker.h>
 
 // standard
 #include <math.h>

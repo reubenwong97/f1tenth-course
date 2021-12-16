@@ -1,8 +1,23 @@
 #include "lab7/geom_helpers.h"
 
-#include <math.h>
-#include <algorithm>
-#include <tuple>
+/* input distance in m, angle in rad
+   because I am looking forward, truncate angles to [-90, 90] degrees
+*/
+std::tuple<int, int> toIndex(const double &distance, const double &angle, const double &resolution=0.05) {
+    std::tuple<int, int> index;
+    int xIdx, yIdx;
+    double correctedAngle, x, y;
+
+    correctedAngle = -angle;
+    x = distance * sin(correctedAngle);
+    y = distance * cos(correctedAngle);
+
+    xIdx = floor(x / resolution);
+    yIdx = floor(y / resolution);
+    index = std::make_tuple(xIdx, yIdx);
+
+    return index;
+}
 
 // Computes indices for grids where laserscan crosses, pass by value since swapping things around
 std::vector<std::tuple<int, int>> bresenham(int x0, int y0, int x1, int y1) {
