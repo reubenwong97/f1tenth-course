@@ -8,6 +8,7 @@ env_viz: "/env_viz"
 dynamic_viz: "/dynamic_viz"
 static_viz: "/static_viz"
 tree_lines: "/tree_lines"
+map_topic: "/map_viz"
 
 # Driving Params
 fov: 180

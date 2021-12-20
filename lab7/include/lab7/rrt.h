@@ -62,6 +62,7 @@ private:
     ros::Publisher points_pub_;
     ros::Publisher waypoint_pub_;
     ros::Publisher lines_pub_;
+    ros::Publisher map_pub_;
 
     // tf stuff
     tf::TransformListener listener;

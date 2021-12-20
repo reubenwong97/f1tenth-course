@@ -23,7 +23,7 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())())
 {
 
     // TODO: Load parameters from yaml file, you could add your own parameters to the rrt_params.yaml file
-    std::string pose_topic, scan_topic, drive_topic, env_viz, dynamic_viz, static_viz, tree_lines;
+    std::string pose_topic, scan_topic, drive_topic, env_viz, dynamic_viz, static_viz, tree_lines, map_topic;
     nh_.getParam("pose_topic", pose_topic);
     nh_.getParam("scan_topic", scan_topic);
     nh_.getParam("drive_topic", drive_topic);
@@ -31,15 +31,17 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())())
     nh_.getParam("dynamic_viz", dynamic_viz);
     nh_.getParam("static_viz", static_viz);
     nh_.getParam("tree_lines", tree_lines);
+    nh_.getParam("map_topic", map_topic);
     nh_.getParam("fov", fov);
 
     // ROS publishers
     // TODO: create publishers for the the drive topic, and other topics you might need
     drive_pub_ = nh_.advertise<ackermann_msgs::AckermannDriveStamped>(drive_topic, 1000);
-    mapvis_pub_ = nh_.advertise<visualization_msgs::Marker>("/env_viz", 1000);
-    points_pub_ = nh_.advertise<visualization_msgs::Marker>("/dynamic_viz", 1000);
-    waypoint_pub_ = nh_.advertise<visualization_msgs::Marker>("/static_viz", 1000);
-    lines_pub_ = nh_.advertise<visualization_msgs::Marker>("/tree_lines", 1000);
+    mapvis_pub_ = nh_.advertise<visualization_msgs::Marker>(env_viz, 1000);
+    points_pub_ = nh_.advertise<visualization_msgs::Marker>(dynamic_viz, 1000);
+    waypoint_pub_ = nh_.advertise<visualization_msgs::Marker>(static_viz, 1000);
+    lines_pub_ = nh_.advertise<visualization_msgs::Marker>(tree_lines, 1000);
+    map_pub_ = nh_.advertise<nav_msgs::OccupancyGrid>(map_topic, 1000);
 
     // ROS subscribers
     // TODO: create subscribers as you need
@@ -114,6 +116,13 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
 
 void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid)
 {
+    nav_msgs::OccupancyGrid grid_msg;
+    grid_msg.header.stamp = ros::Time::now();
+    grid_msg.header.frame_id = "map";
+
+    // fill in map data
+
+    map_pub_.publish(grid_msg);
 }
 
 void RRT::pf_callback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg)
