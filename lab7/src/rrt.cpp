@@ -9,23 +9,7 @@
 #include "lab7/rrt.h"
 #include "lab7/geom_helpers.h"
 
-// convert global point to grid index
-std::vector<unsigned int> to_index(double x_global, double y_global, double resolution = 0.05)
-{
-    double x_grid = x_global;
-    double y_grid = y_global;
-    unsigned int x_grid_int = (unsigned int)std::round(x_grid / resolution);
-    unsigned int y_grid_int = (unsigned int)std::round(y_grid / resolution);
-    if (x_grid_int > 99999)
-    {
-        x_grid_int = 0;
-    }
-    if (y_grid_int > 99999)
-    {
-        y_grid_int = 0;
-    }
-    return {x_grid_int, y_grid_int};
-}
+#define PI 3.1415927
 
 // Destructor of the RRT class
 RRT::~RRT()
@@ -47,6 +31,7 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())())
     nh_.getParam("dynamic_viz", dynamic_viz);
     nh_.getParam("static_viz", static_viz);
     nh_.getParam("tree_lines", tree_lines);
+    nh_.getParam("fov", fov);
 
     // ROS publishers
     // TODO: create publishers for the the drive topic, and other topics you might need
@@ -62,11 +47,29 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())())
     scan_sub_ = nh_.subscribe(scan_topic, 10, &RRT::scan_callback, this);
 
     // TODO: create a occupancy grid
-    // save empty grid for easy reset during scan callback
-    occupancy_grid_empty = std::vector<std::vector<bool>>(500, std::vector<bool>(200, true));
+    // save empty grid for easy reset during scan callback (grid size [500,200])
+    occupancy_grid_empty = std::vector<std::vector<int>>(500, std::vector<int>(200, -1));
     occupancy_grid = occupancy_grid_empty;
 
     ROS_INFO("Created new RRT Object.");
+}
+
+std::vector<double> RRT::truncateFOV(const sensor_msgs::LaserScan::ConstPtr &scan_msg, double &fov_min, double &fov_max, double &angle_increment)
+{
+    double fov_half = toRadians(fov / 2);
+    int min_fov_idx = static_cast<int>((-fov_half - scan_msg->angle_min) /
+                                       scan_msg->angle_increment);
+    int max_fov_idx = static_cast<int>((fov_half - scan_msg->angle_min) /
+                                       scan_msg->angle_increment);
+
+    // store for access outside function
+    // angles for the min and max scan
+    fov_min = scan_msg->angle_min + min_fov_idx * scan_msg->angle_increment;
+    fov_max = scan_msg->angle_min + max_fov_idx * scan_msg->angle_increment;
+    angle_increment = scan_msg->angle_increment;
+
+    return std::vector<double>(scan_msg->ranges.begin() + min_fov_idx,
+                               scan_msg->ranges.begin() + max_fov_idx);
 }
 
 void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
@@ -76,10 +79,41 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
     //    scan_msg (*LaserScan): pointer to the incoming scan message
     // Returns:
     //
+    double fov_min = 0, fov_max = 0, angle_increment = 0, angle = toRadians(-90);
+    std::vector<double> truncatedRanges = truncateFOV(scan_msg, fov_min, fov_max, angle_increment);
 
     // TODO: update your occupancy grid
     occupancy_grid = occupancy_grid_empty;
-    double rear_to_lidar = 0.29275;
+    double rear_to_lidar = 0.29275; // not sure how to use for now
+
+    for (double range : truncatedRanges)
+    {
+        // find hit points of each scan
+        int x, y;
+        std::tuple<int, int> endpoint;
+        std::vector<std::tuple<int, int>> coords;
+        // endpoint needs to be saved to set those locations as occupied since bresenham frees them
+        endpoint = toIndex(range, angle);
+        x = std::get<0>(endpoint);
+        y = std::get<1>(endpoint);
+        angle = angle + angle_increment;
+
+        coords = bresenham(0, 0, x, y);
+        for (std::tuple<int, int> coord : coords)
+        {
+            int row, col;
+            row = std::get<0>(coord);
+            col = std::get<1>(coord);
+
+            occupancy_grid[row][col] = 0; // set to empty
+        }
+
+        occupancy_grid[x][y] = 100; // set to occupied
+    }
+}
+
+void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid)
+{
 }
 
 void RRT::pf_callback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg)
@@ -159,23 +193,7 @@ bool RRT::check_collision(Node &nearest_node, Node &new_node)
     // Args:
     //    nearest_node (Node): nearest node on the tree to the sampled point
     //    new_node (Node): new node created from steering
-    // Returns:
-    //    collision (bool): true if in collision, false otherwise
-
-    bool collision = false;
-    // TODO: fill in this method
-
-    return collision;
-}
-
-bool RRT::is_goal(Node &latest_added_node, double goal_x, double goal_y)
-{
-    // This method checks if the latest node added to the tree is close
-    // enough (defined by goal_threshold) to the goal so we can terminate
-    // the search and find a path
-    // Args:
-    //   latest_added_node (Node): latest addition to the tree
-    //   goal_x (double): x coordinate of the current goal
+    // Returns:double &fov_min, double &fov_max, double &angle_increment of the current goal
     //   goal_y (double): y coordinate of the current goal
     // Returns:
     //   close_enough (bool): true if node close enough to the goal
@@ -246,5 +264,9 @@ std::vector<int> RRT::near(std::vector<Node> &tree, Node &node)
 
     std::vector<int> neighborhood;
     // TODO:: fill in this method
+    return neighborhood;
 }
-return neighborhood;
+
+double toDegrees(double r) { return r * 180 / PI; }
+
+double toRadians(double d) { return d * PI / 180; }

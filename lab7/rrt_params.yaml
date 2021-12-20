@@ -9,6 +9,9 @@ dynamic_viz: "/dynamic_viz"
 static_viz: "/static_viz"
 tree_lines: "/tree_lines"
 
+# Driving Params
+fov: 180
+
 # Topics that RRT publishes to
 # TODO: add your own
 # visualization
