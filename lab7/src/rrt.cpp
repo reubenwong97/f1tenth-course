@@ -23,7 +23,6 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())())
 {
 
     // TODO: Load parameters from yaml file, you could add your own parameters to the rrt_params.yaml file
-    std::string pose_topic, scan_topic, drive_topic, env_viz, dynamic_viz, static_viz, tree_lines, map_topic;
     nh_.getParam("pose_topic", pose_topic);
     nh_.getParam("scan_topic", scan_topic);
     nh_.getParam("drive_topic", drive_topic);
@@ -33,6 +32,14 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())())
     nh_.getParam("tree_lines", tree_lines);
     nh_.getParam("map_topic", map_topic);
     nh_.getParam("fov", fov);
+
+    // grid params
+    nh_.getParam("height", height);
+    nh_.getParam("width", width);
+    nh_.getParam("resolution", resolution);
+
+    // flags
+    nh_.getParam("publish_grid", publish_grid);
 
     // ROS publishers
     // TODO: create publishers for the the drive topic, and other topics you might need
@@ -50,7 +57,7 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())())
 
     // TODO: create a occupancy grid
     // save empty grid for easy reset during scan callback (grid size [500,200])
-    occupancy_grid_empty = std::vector<std::vector<int>>(500, std::vector<int>(200, -1));
+    occupancy_grid_empty = std::vector<std::vector<int>>(height, std::vector<int>(width, -1));
     occupancy_grid = occupancy_grid_empty;
 
     ROS_INFO("Created new RRT Object.");
@@ -72,6 +79,19 @@ std::vector<double> RRT::truncateFOV(const sensor_msgs::LaserScan::ConstPtr &sca
 
     return std::vector<double>(scan_msg->ranges.begin() + min_fov_idx,
                                scan_msg->ranges.begin() + max_fov_idx);
+}
+
+std::vector<int> flatten(const std::vector<std::vector<int>> &matrix)
+{
+    std::size_t total_size = 0;
+    for (const auto &sub : matrix)
+        total_size += sub.size();
+    std::vector<int> res;
+    res.reserve(total_size);
+    for (const auto &sub : matrix)
+        res.insert(res.end(), sub.begin(), sub.end());
+
+    return res;
 }
 
 void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
@@ -114,13 +134,27 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
     }
 }
 
-void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid)
+void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid, const geometry_msgs::Pose &pose_msg)
 {
     nav_msgs::OccupancyGrid grid_msg;
+    std::vector<int> flattened;
     grid_msg.header.stamp = ros::Time::now();
     grid_msg.header.frame_id = "map";
 
     // fill in map data
+    grid_msg.info.height = height; // measurements in terms of cells
+    grid_msg.info.width = width;
+    grid_msg.info.resolution = resolution;
+    grid_msg.info.origin.position.x = pose_msg.position.x;
+    grid_msg.info.origin.position.y = pose_msg.position.y;
+    //?: Not sure if angle required
+    grid_msg.info.origin.orientation.w = pose_msg.orientation.w;
+    grid_msg.info.origin.orientation.x = pose_msg.orientation.x;
+    grid_msg.info.origin.orientation.y = pose_msg.orientation.y;
+    grid_msg.info.origin.orientation.z = pose_msg.orientation.z;
+
+    flattened = flatten(occupancy_grid);
+    grid_msg.data = std::vector<int8_t>(flattened.begin(), flattened.end()); // cast to match message data type
 
     map_pub_.publish(grid_msg);
 }

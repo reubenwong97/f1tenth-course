@@ -13,6 +13,14 @@ map_topic: "/map_viz"
 # Driving Params
 fov: 180
 
+# grid params
+height: 500
+width: 200
+resolution: 0.05
+
+# flags for debugging
+publish_grid: true
+
 # Topics that RRT publishes to
 # TODO: add your own
 # visualization

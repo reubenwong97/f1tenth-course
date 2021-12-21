@@ -64,6 +64,16 @@ private:
     ros::Publisher lines_pub_;
     ros::Publisher map_pub_;
 
+    // topics
+    std::string pose_topic, scan_topic, drive_topic, env_viz, dynamic_viz, static_viz, tree_lines, map_topic;
+
+    // grid params
+    int height, width;
+    double resolution;
+
+    // flags for debugging;
+    bool publish_grid;
+
     // tf stuff
     tf::TransformListener listener;
 
@@ -94,9 +104,10 @@ private:
     double cost(std::vector<Node> &tree, Node &node);
     double line_cost(Node &n1, Node &n2);
     std::vector<int> near(std::vector<Node> &tree, Node &node);
+    std::vector<int> flatten(const std::vector<std::vector<int>> &matrix);
 
     // to consider writing as func
-    void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);
+    void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid, const geometry_msgs::Pose &pose_msg);
 };
 
 double findDistance(double a, double b, double angle);
