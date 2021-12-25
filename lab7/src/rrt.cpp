@@ -44,10 +44,10 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())())
     // ROS publishers
     // TODO: create publishers for the the drive topic, and other topics you might need
     drive_pub_ = nh_.advertise<ackermann_msgs::AckermannDriveStamped>(drive_topic, 1000);
-    mapvis_pub_ = nh_.advertise<visualization_msgs::Marker>(env_viz, 1000);
-    points_pub_ = nh_.advertise<visualization_msgs::Marker>(dynamic_viz, 1000);
-    waypoint_pub_ = nh_.advertise<visualization_msgs::Marker>(static_viz, 1000);
-    lines_pub_ = nh_.advertise<visualization_msgs::Marker>(tree_lines, 1000);
+    // mapvis_pub_ = nh_.advertise<visualization_msgs::Marker>(env_viz, 1000);
+    // points_pub_ = nh_.advertise<visualization_msgs::Marker>(dynamic_viz, 1000);
+    // waypoint_pub_ = nh_.advertise<visualization_msgs::Marker>(static_viz, 1000);
+    // lines_pub_ = nh_.advertise<visualization_msgs::Marker>(tree_lines, 1000);
     map_pub_ = nh_.advertise<nav_msgs::OccupancyGrid>(map_topic, 1000);
 
     // ROS subscribers
@@ -81,7 +81,7 @@ std::vector<double> RRT::truncateFOV(const sensor_msgs::LaserScan::ConstPtr &sca
                                scan_msg->ranges.begin() + max_fov_idx);
 }
 
-std::vector<int> flatten(const std::vector<std::vector<int>> &matrix)
+std::vector<int> RRT::flatten(const std::vector<std::vector<int>> &matrix)
 {
     std::size_t total_size = 0;
     for (const auto &sub : matrix)
@@ -132,9 +132,11 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
 
         occupancy_grid[x][y] = 100; // set to occupied
     }
+
+    publishOccupancy(occupancy_grid);
 }
 
-void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid, const geometry_msgs::Pose &pose_msg)
+void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid)
 {
     nav_msgs::OccupancyGrid grid_msg;
     std::vector<int> flattened;
@@ -145,13 +147,14 @@ void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid, c
     grid_msg.info.height = height; // measurements in terms of cells
     grid_msg.info.width = width;
     grid_msg.info.resolution = resolution;
-    grid_msg.info.origin.position.x = pose_msg.position.x;
-    grid_msg.info.origin.position.y = pose_msg.position.y;
+    // grid_msg.info.origin.position.x = last_pose.pose.pose.position.x;
+    // grid_msg.info.origin.position.y = last_pose.pose.pose.position.y;
+    // grid_msg.info.origin.position.y = pose_msg.position.y;
     //?: Not sure if angle required
-    grid_msg.info.origin.orientation.w = pose_msg.orientation.w;
-    grid_msg.info.origin.orientation.x = pose_msg.orientation.x;
-    grid_msg.info.origin.orientation.y = pose_msg.orientation.y;
-    grid_msg.info.origin.orientation.z = pose_msg.orientation.z;
+    // grid_msg.info.origin.orientation.w = last_pose.pose.pose.orientation.w;
+    // grid_msg.info.origin.orientation.x = last_pose.pose.pose.orientation.x;
+    // grid_msg.info.origin.orientation.y = last_pose.pose.pose.orientation.y;
+    // grid_msg.info.origin.orientation.z = last_pose.pose.pose.orientation.z;
 
     flattened = flatten(occupancy_grid);
     grid_msg.data = std::vector<int8_t>(flattened.begin(), flattened.end()); // cast to match message data type
@@ -159,7 +162,8 @@ void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid, c
     map_pub_.publish(grid_msg);
 }
 
-void RRT::pf_callback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg)
+// void RRT::pf_callback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg)
+void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
 {
     // The pose callback when subscribed to particle filter's inferred pose
     // The RRT main loop happens here
@@ -174,6 +178,7 @@ void RRT::pf_callback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg)
     // TODO: fill in the RRT main loop
 
     // path found as Path message
+    // last_pose = pose_msg;
 }
 
 std::vector<double> RRT::sample()

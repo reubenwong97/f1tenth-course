@@ -14,6 +14,7 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Point.h>
 #include <ackermann_msgs/AckermannDriveStamped.h>
+#include <nav_msgs/Odometry.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
@@ -70,6 +71,8 @@ private:
     // grid params
     int height, width;
     double resolution;
+    // last pose for publishing map
+    // nav_msgs::Odometry::Ptr last_pose;
 
     // flags for debugging;
     bool publish_grid;
@@ -88,7 +91,10 @@ private:
 
     // callbacks
     // where rrt actually happens
-    void pf_callback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg);
+    // original data type
+    // void pf_callback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg);
+    // new data type
+    void pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg);
     // updates occupancy grid
     void scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg);
 
@@ -107,7 +113,7 @@ private:
     std::vector<int> flatten(const std::vector<std::vector<int>> &matrix);
 
     // to consider writing as func
-    void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid, const geometry_msgs::Pose &pose_msg);
+    void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);
 };
 
 double findDistance(double a, double b, double angle);
