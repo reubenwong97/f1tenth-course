@@ -133,7 +133,8 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
         occupancy_grid[x][y] = 100; // set to occupied
     }
 
-    publishOccupancy(occupancy_grid);
+    if (pose_set)
+        publishOccupancy(occupancy_grid);
 }
 
 void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid)
@@ -147,14 +148,14 @@ void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid)
     grid_msg.info.height = height; // measurements in terms of cells
     grid_msg.info.width = width;
     grid_msg.info.resolution = resolution;
-    // grid_msg.info.origin.position.x = last_pose.pose.pose.position.x;
-    // grid_msg.info.origin.position.y = last_pose.pose.pose.position.y;
-    // grid_msg.info.origin.position.y = pose_msg.position.y;
-    //?: Not sure if angle required
-    // grid_msg.info.origin.orientation.w = last_pose.pose.pose.orientation.w;
-    // grid_msg.info.origin.orientation.x = last_pose.pose.pose.orientation.x;
-    // grid_msg.info.origin.orientation.y = last_pose.pose.pose.orientation.y;
-    // grid_msg.info.origin.orientation.z = last_pose.pose.pose.orientation.z;
+    // std::cout << "Pose position x" << last_pose.pose.pose.position.x << std::endl;
+    grid_msg.info.origin.position.x = last_pose.pose.pose.position.x;
+    grid_msg.info.origin.position.y = last_pose.pose.pose.position.y;
+    // ?: Not sure if angle required
+    grid_msg.info.origin.orientation.w = last_pose.pose.pose.orientation.w;
+    grid_msg.info.origin.orientation.x = last_pose.pose.pose.orientation.x;
+    grid_msg.info.origin.orientation.y = last_pose.pose.pose.orientation.y;
+    grid_msg.info.origin.orientation.z = last_pose.pose.pose.orientation.z;
 
     flattened = flatten(occupancy_grid);
     grid_msg.data = std::vector<int8_t>(flattened.begin(), flattened.end()); // cast to match message data type
@@ -178,7 +179,16 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     // TODO: fill in the RRT main loop
 
     // path found as Path message
-    // last_pose = pose_msg;
+    last_pose = *pose_msg;
+    pose_set = true;
+    // ROS_INFO_STREAM("pose has been set");
+    // std::cout << "pose has been set" << std::endl;
+    // last_posx = pose_msg->pose.pose.position.x;
+    // last_posy = pose_msg->pose.pose.position.y;
+    // last_orw = pose_msg->pose.pose.orientation.w;
+    // last_orx = last_pose->pose.pose.orientation.x;
+    // last_ory = last_pose->pose.pose.orientation.y;
+    // last_orz = last_pose->pose.pose.orientation.z;
 }
 
 std::vector<double> RRT::sample()
