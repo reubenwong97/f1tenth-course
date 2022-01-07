@@ -8,15 +8,12 @@ env_viz: "/env_viz"
 dynamic_viz: "/dynamic_viz"
 static_viz: "/static_viz"
 tree_lines: "/tree_lines"
-map_topic: "/map_viz"
+map_viz_topic: "/map_viz"
+map_topic: "/map"
 
 # Driving Params
 fov: 180
 
-# grid params
-height: 500
-width: 200
-resolution: 0.05
 
 # flags for debugging
 publish_grid: true

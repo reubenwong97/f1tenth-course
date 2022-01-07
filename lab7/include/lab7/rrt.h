@@ -63,14 +63,15 @@ private:
     ros::Publisher points_pub_;
     ros::Publisher waypoint_pub_;
     ros::Publisher lines_pub_;
-    ros::Publisher map_pub_;
+    ros::Publisher map_viz_pub_;
 
     // topics
-    std::string pose_topic, scan_topic, drive_topic, env_viz, dynamic_viz, static_viz, tree_lines, map_topic;
+    std::string pose_topic, scan_topic, drive_topic, env_viz, dynamic_viz, static_viz, tree_lines, map_viz_topic, map_topic;
 
     // grid params
     int height, width;
     double resolution;
+    double origin_x, origin_y;
     // last pose for publishing map
     nav_msgs::Odometry last_pose;
     bool pose_set = false;
@@ -83,8 +84,12 @@ private:
     tf::TransformListener listener;
 
     // TODO: create RRT params
-    std::vector<std::vector<int>> occupancy_grid_empty;
+    std::vector<std::vector<int>> occupancy_grid_static;
     std::vector<std::vector<int>> occupancy_grid;
+
+    // constants to represent if a grid cell is occupied or free
+    const int OCCUPIED = 100;
+    const int FREE = 0;
 
     // random generator, use this
     std::mt19937 gen;
@@ -113,6 +118,7 @@ private:
     double line_cost(Node &n1, Node &n2);
     std::vector<int> near(std::vector<Node> &tree, Node &node);
     std::vector<int> flatten(const std::vector<std::vector<int>> &matrix);
+    std::vector<std::vector<int>> unflatten(const std::vector<int8_t> &array, int height, int width);
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);
