@@ -134,7 +134,7 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
         std::tuple<int, int> endpoint;
         std::vector<std::tuple<int, int>> coords;
         // endpoint needs to be saved to set those locations as occupied since bresenham frees them
-        endpoint = toIndex(range, angle);
+        endpoint = toIndex(range, angle, resolution, width);
         x = std::get<0>(endpoint);
         y = std::get<1>(endpoint);
         angle = angle + angle_increment;
@@ -152,8 +152,8 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
         occupancy_grid[x][y] = OCCUPIED; // set to occupied
     }
 
-    if (pose_set)
-        publishOccupancy(occupancy_grid);
+    // if (pose_set)
+    publishOccupancy(occupancy_grid);
 }
 
 void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid)
@@ -200,8 +200,8 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     // TODO: fill in the RRT main loop
 
     // path found as Path message
-    last_pose = *pose_msg;
-    pose_set = true;
+    // last_pose = *pose_msg;
+    // pose_set = true;
     // ROS_INFO_STREAM("pose has been set");
     // std::cout << "pose has been set" << std::endl;
     // last_posx = pose_msg->pose.pose.position.x;
