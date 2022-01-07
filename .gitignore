@@ -4,3 +4,6 @@
 tmp/
 
 .ccls-cache/
+
+# ignore vscode settings
+**/.vscode
