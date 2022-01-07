@@ -72,7 +72,7 @@ private:
     int height, width;
     double resolution;
     // last pose for publishing map
-    nav_msgs::Odometry last_pose;
+    // nav_msgs::Odometry last_pose;
     bool pose_set = false;
     // double last_posx, last_posy, last_orw, last_orx, last_ory, last_orz;
 
