@@ -53,6 +53,8 @@ std::tuple<int, int> toGlobalIndex(const double &distance,
     x_idx = floor((end_x - top_left_x) / 2);
     y_idx = floor((end_y - top_left_y) / 2);
     index = std::make_tuple(x_idx, y_idx);
+
+    return index;
 }
 
 geometry_msgs::PointStamped getTransformedPoint(const double &pos_x, const double &pos_y, const geometry_msgs::TransformStamped &transformStamped)
