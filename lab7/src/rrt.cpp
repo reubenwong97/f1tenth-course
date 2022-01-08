@@ -19,7 +19,7 @@ RRT::~RRT()
 }
 
 // Constructor of the RRT class
-RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())())
+RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())()), tfListener(tfBuffer)
 {
 
     // TODO: Load parameters from yaml file, you could add your own parameters to the rrt_params.yaml file
@@ -101,6 +101,17 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
     //    scan_msg (*LaserScan): pointer to the incoming scan message
     // Returns:
     //
+    try
+    {
+        // convert local frame to global frame
+        transformStamped = tfBuffer.lookupTransform(global_frame, local_frame,
+                                                    ros::Time(0));
+    }
+    catch (tf2::TransformException &ex)
+    {
+        ROS_WARN("%s", ex.what());
+    }
+
     double fov_min = 0, fov_max = 0, angle_increment = 0, angle = toRadians(-90);
     std::vector<double> truncatedRanges = truncateFOV(scan_msg, fov_min, fov_max, angle_increment);
 
