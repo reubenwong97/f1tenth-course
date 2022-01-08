@@ -61,6 +61,8 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())()), tfListen
     resolution = map_message.info.resolution;
     origin_x = map_message.info.origin.position.x;
     origin_y = map_message.info.origin.position.y;
+    top_left_x = origin_x + resolution * width;
+    top_left_y = origin_y + resolution * height;
 
     occupancy_grid_static = unflatten(map_message.data, height, width);
 
@@ -104,7 +106,8 @@ std::vector<int> RRT::flatten(const std::vector<std::vector<int>> &matrix)
 std::vector<std::vector<int>> RRT::unflatten(const std::vector<int8_t> &array, int height, int width)
 {
     std::vector<std::vector<int>> res(height, std::vector<int>(width, FREE));
-    for (int k = 0; k < array.size(); k++) {
+    for (int k = 0; k < array.size(); k++)
+    {
         int i = k / width;
         int j = k % width;
         res[i][j] = array[k];
@@ -118,11 +121,9 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
     // The scan callback, update your occupancy grid here
     // Args:
     //    scan_msg (*LaserScan): pointer to the incoming scan message
-    // Returns:
-    //
     try
     {
-        // convert local frame to global frame
+        // acquire transform to convert local frame to global frame
         transformStamped = tfBuffer.lookupTransform(global_frame, local_frame,
                                                     ros::Time(0));
     }
@@ -138,33 +139,34 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
     occupancy_grid = occupancy_grid_static;
     double rear_to_lidar = 0.29275; // not sure how to use for now
 
-    for (double range : truncatedRanges)
+    if (pose_set)
     {
-        // find hit points of each scan
-        int x, y;
-        std::tuple<int, int> endpoint;
-        std::vector<std::tuple<int, int>> coords;
-        // endpoint needs to be saved to set those locations as occupied since bresenham frees them
-        endpoint = toIndex(range, angle, resolution, width);
-        x = std::get<0>(endpoint);
-        y = std::get<1>(endpoint);
-        angle = angle + angle_increment;
-
-        coords = bresenham(0, 0, x, y);
-        for (std::tuple<int, int> coord : coords)
+        for (double range : truncatedRanges)
         {
-            int row, col;
-            row = std::get<0>(coord);
-            col = std::get<1>(coord);
+            // find hit points of each scan
+            int x, y;
+            std::tuple<int, int> endpoint;
+            std::vector<std::tuple<int, int>> coords;
+            // endpoint needs to be saved to set those locations as occupied since bresenham frees them
+            endpoint = toGlobalIndex(range, angle, top_left_x, top_left_y, transformStamped, last_pose);
+            x = std::get<0>(endpoint);
+            y = std::get<1>(endpoint);
+            angle = angle + angle_increment;
 
-            occupancy_grid[row][col] = FREE; // set to empty
+            coords = bresenham(0, 0, x, y);
+            for (std::tuple<int, int> coord : coords)
+            {
+                int row, col;
+                row = std::get<0>(coord);
+                col = std::get<1>(coord);
+
+                occupancy_grid[row][col] = FREE; // set to empty
+            }
+
+            occupancy_grid[x][y] = OCCUPIED; // set to occupied
         }
-
-        occupancy_grid[x][y] = OCCUPIED; // set to occupied
+        publishOccupancy(occupancy_grid);
     }
-
-    // if (pose_set)
-    publishOccupancy(occupancy_grid);
 }
 
 void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid)
@@ -211,8 +213,8 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     // TODO: fill in the RRT main loop
 
     // path found as Path message
-    // last_pose = *pose_msg;
-    // pose_set = true;
+    last_pose = *pose_msg;
+    pose_set = true;
     // ROS_INFO_STREAM("pose has been set");
     // std::cout << "pose has been set" << std::endl;
     // last_posx = pose_msg->pose.pose.position.x;
