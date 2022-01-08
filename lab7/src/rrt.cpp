@@ -8,6 +8,7 @@
 
 #include "lab7/rrt.h"
 #include "lab7/geom_helpers.h"
+#include "stdio.h"
 
 #define PI 3.1415927
 
@@ -66,6 +67,41 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())())
 
     occupancy_grid = occupancy_grid_static;
 
+    // some testing
+    double x, y;
+    x = origin_x; y = origin_y;
+    std::cout<< "(" << x << ", " <<y<< ") to grid is" << get_grid_coords(x, y)[0] << ", " << get_grid_coords(x, y)[1] << std::endl;
+    x = 9.5; y = 1.9;
+    std::cout<< "(" << x << ", " <<y<< ") to grid is" << get_grid_coords(x, y)[0] << ", " << get_grid_coords(x, y)[1] << std::endl;
+    x = 7.05; y = -0.317;
+    std::cout<< "(" << x << ", " <<y<< ") to grid is" << get_grid_coords(x, y)[0] << ", " << get_grid_coords(x, y)[1] << std::endl;
+    x = 51; y = 51;
+    std::cout<< "(" << x << ", " <<y<< ") to grid is" << get_grid_coords(x, y)[0] << ", " << get_grid_coords(x, y)[1] << std::endl;
+    x = -14.3; y = 9.82;
+    std::cout<< "(" << x << ", " <<y<< ") to grid is" << get_grid_coords(x, y)[0] << ", " << get_grid_coords(x, y)[1] << std::endl;
+    std::cout<< "occupied?" << check_occupied(get_grid_coords(x, y)[0], get_grid_coords(x, y)[1]) << std::endl;
+
+    Node node_1, node_2;
+    node_1.x = 9.5; node_1.y = 1.9;
+    node_2.x = 7.05; node_2.y = -0.317;
+    std::cout<< "(Expected 1) collide?" << check_collision(node_1, node_2) << std::endl;
+
+    node_1.x = 2.1; node_1.y = -0.511;
+    node_2.x = -12.5; node_2.y = -0.188;
+    std::cout<< "(Expected 0) collide?" << check_collision(node_1, node_2) << std::endl;
+
+    node_1.x = -12.5; node_1.y = 3.84;
+    node_2.x = -12.5; node_2.y = -0.188;
+    std::cout<< "(Expected 1) collide?" << check_collision(node_1, node_2) << std::endl;
+
+    node_1.x = -12.5; node_1.y = 3.84;
+    node_2.x = -14.2; node_2.y = 3.92;
+    std::cout<< "(Expected 0) collide?" << check_collision(node_1, node_2) << std::endl;
+
+    node_1.x = -13.8; node_1.y = 8.65;
+    node_2.x = -11.1; node_2.y = 6.42;
+    std::cout<< "(Expected 1) collide?" << check_collision(node_1, node_2) << std::endl;
+
     ROS_INFO("Created new RRT Object.");
 }
 
@@ -115,44 +151,44 @@ std::vector<std::vector<int>> RRT::unflatten(const std::vector<int8_t> &array, i
 
 void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
 {
-    // The scan callback, update your occupancy grid here
-    // Args:
-    //    scan_msg (*LaserScan): pointer to the incoming scan message
-    // Returns:
-    //
-    double fov_min = 0, fov_max = 0, angle_increment = 0, angle = toRadians(-90);
-    std::vector<double> truncatedRanges = truncateFOV(scan_msg, fov_min, fov_max, angle_increment);
+    // // The scan callback, update your occupancy grid here
+    // // Args:
+    // //    scan_msg (*LaserScan): pointer to the incoming scan message
+    // // Returns:
+    // //
+    // double fov_min = 0, fov_max = 0, angle_increment = 0, angle = toRadians(-90);
+    // std::vector<double> truncatedRanges = truncateFOV(scan_msg, fov_min, fov_max, angle_increment);
 
-    // TODO: update your occupancy grid
-    occupancy_grid = occupancy_grid_static;
-    double rear_to_lidar = 0.29275; // not sure how to use for now
+    // // TODO: update your occupancy grid
+    // occupancy_grid = occupancy_grid_static;
+    // double rear_to_lidar = 0.29275; // not sure how to use for now
 
-    for (double range : truncatedRanges)
-    {
-        // find hit points of each scan
-        int x, y;
-        std::tuple<int, int> endpoint;
-        std::vector<std::tuple<int, int>> coords;
-        // endpoint needs to be saved to set those locations as occupied since bresenham frees them
-        endpoint = toIndex(range, angle, resolution, width);
-        x = std::get<0>(endpoint);
-        y = std::get<1>(endpoint);
-        angle = angle + angle_increment;
+    // for (double range : truncatedRanges)
+    // {
+    //     // find hit points of each scan
+    //     int x, y;
+    //     std::tuple<int, int> endpoint;
+    //     std::vector<std::tuple<int, int>> coords;
+    //     // endpoint needs to be saved to set those locations as occupied since bresenham frees them
+    //     endpoint = toIndex(range, angle, resolution, width);
+    //     x = std::get<0>(endpoint);
+    //     y = std::get<1>(endpoint);
+    //     angle = angle + angle_increment;
 
-        coords = bresenham(0, 0, x, y);
-        for (std::tuple<int, int> coord : coords)
-        {
-            int row, col;
-            row = std::get<0>(coord);
-            col = std::get<1>(coord);
+    //     coords = bresenham(0, 0, x, y);
+    //     for (std::tuple<int, int> coord : coords)
+    //     {
+    //         int row, col;
+    //         row = std::get<0>(coord);
+    //         col = std::get<1>(coord);
 
-            occupancy_grid[row][col] = FREE; // set to empty
-        }
+    //         occupancy_grid[row][col] = FREE; // set to empty
+    //     }
 
-        occupancy_grid[x][y] = OCCUPIED; // set to occupied
-    }
+    //     occupancy_grid[x][y] = OCCUPIED; // set to occupied
+    // }
 
-    // if (pose_set)
+    // // if (pose_set)
     publishOccupancy(occupancy_grid);
 }
 
@@ -265,14 +301,59 @@ Node RRT::steer(Node &nearest_node, std::vector<double> &sampled_point)
     return new_node;
 }
 
-bool RRT::check_collision(Node &nearest_node, Node &new_node)
-{
-    // This method returns a boolean indicating if the path between the
+std::vector<int> RRT::get_grid_coords(double global_x, double global_y) {
+    // This method returns the grid coordinates when given the global coordinates
+
+    // Args:
+    //    global_x, global_y: x and y coordinates in global frame accordingly
+    // Returns:
+    //    vector of grid coordinates (grid_x, grid_y)
+    int grid_x = std::floor((global_x - origin_x)/ resolution);
+    int grid_y = std::floor((global_y - origin_y)/ resolution);
+    return {grid_x, grid_y};
+}
+
+bool RRT::check_occupied(int grid_x, int grid_y) {
+    // This method checks if a grid cell is occupied when given the grid coordinates
+    return occupancy_grid[grid_x][grid_y] == OCCUPIED;
+}
+
+bool RRT::check_collision(Node &nearest_node, Node &new_node) {
+    // This method returns a boolean indicating if the path between the 
     // nearest node and the new node created from steering is collision free
     // Args:
     //    nearest_node (Node): nearest node on the tree to the sampled point
     //    new_node (Node): new node created from steering
-    // Returns:double &fov_min, double &fov_max, double &angle_increment of the current goal
+    // Returns:
+    //    collision (bool): true if in collision, false otherwise
+
+    bool collision = false;
+    // TODO: fill in this method
+    const int NUM_CHECKPOINTS = 1000;
+    double checkpoint_x, checkpoint_y;
+    std::vector<int> grid_coords(2, 0.0);
+    for (int i = 0; i <= NUM_CHECKPOINTS; i++) {
+        checkpoint_x = nearest_node.x + (double) i / NUM_CHECKPOINTS * (new_node.x - nearest_node.x);
+        checkpoint_y = nearest_node.y + (double) i / NUM_CHECKPOINTS * (new_node.y - nearest_node.y);
+        grid_coords = get_grid_coords(checkpoint_x, checkpoint_y);
+        if (check_occupied(grid_coords[0], grid_coords[1])) {
+            collision = true;
+            std::cout<< "occupied cell (" << checkpoint_x << ", " << checkpoint_y << ")" << std::endl;
+            std::cout<< "grid coord (" << grid_coords[0] << ", " << grid_coords[1] << ")" << std::endl;
+            break;
+        }
+    }
+
+    return collision;
+}
+
+bool RRT::is_goal(Node &latest_added_node, double goal_x, double goal_y) {
+    // This method checks if the latest node added to the tree is close
+    // enough (defined by goal_threshold) to the goal so we can terminate
+    // the search and find a path
+    // Args:
+    //   latest_added_node (Node): latest addition to the tree
+    //   goal_x (double): x coordinate of the current goal
     //   goal_y (double): y coordinate of the current goal
     // Returns:
     //   close_enough (bool): true if node close enough to the goal

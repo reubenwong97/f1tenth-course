@@ -119,6 +119,8 @@ private:
     std::vector<int> near(std::vector<Node> &tree, Node &node);
     std::vector<int> flatten(const std::vector<std::vector<int>> &matrix);
     std::vector<std::vector<int>> unflatten(const std::vector<int8_t> &array, int height, int width);
+    std::vector<int> get_grid_coords(double global_x, double global_y);
+    bool check_occupied(int grid_x, int grid_y);
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);
