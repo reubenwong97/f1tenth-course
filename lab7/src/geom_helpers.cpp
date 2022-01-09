@@ -23,39 +23,6 @@ std::tuple<int, int> toLocalIndex(const double &distance, const double &angle, c
     return index;
 }
 
-/* NOTE: Origin is at the bottom right corner of the map
-*/
-std::tuple<int, int> toGlobalIndex(const double &distance,
-                                   const double &angle, const double &top_left_x, const double &top_left_y,
-                                   const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg)
-{
-    // get position of car in global frame
-    double local_pos_x, local_pos_y, global_pos_x, global_pos_y, end_x, end_y;
-    int x_idx, y_idx;
-    geometry_msgs::PointStamped car_pos;
-    local_pos_x = pose_msg.pose.pose.position.x;
-    local_pos_y = pose_msg.pose.pose.position.y;
-    car_pos = getTransformedPoint(local_pos_x, local_pos_y, transformStamped);
-    global_pos_x = car_pos.point.x;
-    global_pos_y = car_pos.point.y;
-
-    std::tuple<int, int> index;
-    double correctedAngle, x, y;
-
-    correctedAngle = -angle;
-    x = distance * sin(correctedAngle);
-    y = distance * cos(correctedAngle);
-
-    // get coords of the end points in global frame
-    end_x = global_pos_x + x;
-    end_y = global_pos_y + y;
-
-    x_idx = floor((end_x - top_left_x) / 2);
-    y_idx = floor((end_y - top_left_y) / 2);
-    index = std::make_tuple(x_idx, y_idx);
-
-    return index;
-}
 
 geometry_msgs::PointStamped getTransformedPoint(const double &pos_x, const double &pos_y, const geometry_msgs::TransformStamped &transformStamped)
 {

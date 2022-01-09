@@ -85,6 +85,7 @@ private:
     double origin_x, origin_y, top_left_x, top_left_y;
     // last pose for publishing map
     nav_msgs::Odometry last_pose;
+    double heading_current;
     bool pose_set = false;
     // double last_posx, last_posy, last_orw, last_orx, last_ory, last_orz;
 
@@ -132,6 +133,8 @@ private:
     std::vector<std::vector<int>> unflatten(const std::vector<int8_t> &array, int height, int width);
     std::vector<int> get_grid_coords(double global_x, double global_y);
     bool check_occupied(int grid_x, int grid_y);
+    std::tuple<int, int> toGlobalIndex(const double &distance, const double &angle,
+                                   const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);

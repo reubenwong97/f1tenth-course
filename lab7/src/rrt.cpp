@@ -90,6 +90,41 @@ std::vector<double> RRT::truncateFOV(const sensor_msgs::LaserScan::ConstPtr &sca
                                scan_msg->ranges.begin() + max_fov_idx);
 }
 
+/* NOTE: Origin is at the bottom right corner of the map
+*/
+std::tuple<int, int> RRT::toGlobalIndex(const double &distance,
+                                    const double &angle,
+                                    const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg)
+{
+    // get position of car in global frame
+    double local_pos_x, local_pos_y, global_pos_x, global_pos_y, end_x, end_y;
+    int x_idx, y_idx;
+    geometry_msgs::PointStamped car_pos;
+    local_pos_x = pose_msg.pose.pose.position.x;
+    local_pos_y = pose_msg.pose.pose.position.y;
+    car_pos = getTransformedPoint(local_pos_x, local_pos_y, transformStamped);
+    global_pos_x = car_pos.point.x;
+    global_pos_y = car_pos.point.y;
+
+    std::tuple<int, int> index;
+
+    double rear_to_lidar = 0.29275;
+    double x_lidar = global_pos_x + rear_to_lidar * std::cos(heading_current);
+    double y_lidar = global_pos_y + rear_to_lidar * std::sin(heading_current);
+    double global_angle = angle + heading_current;
+
+    end_x = x_lidar + distance * std::cos(global_angle);
+    end_y = y_lidar + distance * std::sin(global_angle);
+
+    std::vector<int> grid_coords = get_grid_coords(end_x, end_y);
+
+    x_idx = grid_coords[0];
+    y_idx = grid_coords[1];
+    index = std::make_tuple(x_idx, y_idx);
+
+    return index;
+}
+
 std::vector<int> RRT::flatten(const std::vector<std::vector<int>> &matrix)
 {
     std::size_t total_size = 0;
@@ -116,6 +151,13 @@ std::vector<std::vector<int>> RRT::unflatten(const std::vector<int8_t> &array, i
             res[i][j] = OCCUPIED; // assume occupied for weird values
         }
     }
+    // std::vector<int> grid_coords = get_grid_coords(0, 0);
+    // int x = grid_coords[0];
+    // int y = grid_coords[1];
+    // std::cout<< "x, y = " << x << ", " << y << std::endl;
+    // for (int i = 0; i < 100; i++) {
+    //     res[x][y+i] = OCCUPIED;
+    // }
 
     return res;
 }
@@ -152,7 +194,7 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
             std::tuple<int, int> endpoint;
             std::vector<std::tuple<int, int>> coords;
             // endpoint needs to be saved to set those locations as occupied since bresenham frees them
-            endpoint = toGlobalIndex(range, angle, top_left_x, top_left_y, transformStamped, last_pose);
+            endpoint = toGlobalIndex(range, angle, transformStamped, last_pose);
             x = std::get<0>(endpoint);
             y = std::get<1>(endpoint);
             angle = angle + angle_increment;
@@ -227,6 +269,11 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     // last_orx = last_pose->pose.pose.orientation.x;
     // last_ory = last_pose->pose.pose.orientation.y;
     // last_orz = last_pose->pose.pose.orientation.z;
+
+    // compute current heading
+    double siny_cosp = 2.0 * (last_pose.pose.pose.orientation.w * last_pose.pose.pose.orientation.z + last_pose.pose.pose.orientation.x * last_pose.pose.pose.orientation.y);
+    double cosy_cosp = 1.0 - 2.0 * (last_pose.pose.pose.orientation.y * last_pose.pose.pose.orientation.y + last_pose.pose.pose.orientation.z * last_pose.pose.pose.orientation.z);
+    heading_current = std::atan2(siny_cosp, cosy_cosp);
 }
 
 std::vector<double> RRT::sample()
@@ -289,7 +336,7 @@ std::vector<int> RRT::get_grid_coords(double global_x, double global_y) {
     //    global_x, global_y: x and y coordinates in global frame accordingly
     // Returns:
     //    vector of grid coordinates (grid_x, grid_y)
-    int grid_y = std::floor((global_x - origin_x)/ resolution);
+    int grid_y = std::floor((global_x - origin_x)/ resolution); // the grid visualization is flipped
     int grid_x = std::floor((global_y - origin_y)/ resolution);
     return {grid_x, grid_y};
 }
