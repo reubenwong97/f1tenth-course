@@ -93,8 +93,8 @@ std::vector<double> RRT::truncateFOV(const sensor_msgs::LaserScan::ConstPtr &sca
 /* NOTE: Origin is at the bottom right corner of the map
 */
 std::tuple<int, int> RRT::toGlobalIndex(const double &distance,
-                                    const double &angle,
-                                    const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg)
+                                        const double &angle,
+                                        const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg)
 {
     // get position of car in global frame
     double local_pos_x, local_pos_y, global_pos_x, global_pos_y, end_x, end_y;
@@ -147,7 +147,8 @@ std::vector<std::vector<int>> RRT::unflatten(const std::vector<int8_t> &array, i
         int i = k / width;
         int j = k % width;
         res[i][j] = array[k];
-        if ((array[k] != FREE) && (array[k] != OCCUPIED)) {
+        if ((array[k] != FREE) && (array[k] != OCCUPIED))
+        {
             res[i][j] = OCCUPIED; // assume occupied for weird values
         }
     }
@@ -329,25 +330,28 @@ Node RRT::steer(Node &nearest_node, std::vector<double> &sampled_point)
     return new_node;
 }
 
-std::vector<int> RRT::get_grid_coords(double global_x, double global_y) {
+std::vector<int> RRT::get_grid_coords(double global_x, double global_y)
+{
     // This method returns the grid coordinates when given the global coordinates
 
     // Args:
     //    global_x, global_y: x and y coordinates in global frame accordingly
     // Returns:
     //    vector of grid coordinates (grid_x, grid_y)
-    int grid_y = std::floor((global_x - origin_x)/ resolution); // the grid visualization is flipped
-    int grid_x = std::floor((global_y - origin_y)/ resolution);
+    int grid_y = std::floor((global_x - origin_x) / resolution); // the grid visualization is flipped
+    int grid_x = std::floor((global_y - origin_y) / resolution);
     return {grid_x, grid_y};
 }
 
-bool RRT::check_occupied(int grid_x, int grid_y) {
+bool RRT::check_occupied(int grid_x, int grid_y)
+{
     // This method checks if a grid cell is occupied when given the grid coordinates
     return occupancy_grid[grid_x][grid_y] == OCCUPIED;
 }
 
-bool RRT::check_collision(Node &nearest_node, Node &new_node) {
-    // This method returns a boolean indicating if the path between the 
+bool RRT::check_collision(Node &nearest_node, Node &new_node)
+{
+    // This method returns a boolean indicating if the path between the
     // nearest node and the new node created from steering is collision free
     // Args:
     //    nearest_node (Node): nearest node on the tree to the sampled point
@@ -360,14 +364,16 @@ bool RRT::check_collision(Node &nearest_node, Node &new_node) {
     const int NUM_CHECKPOINTS = 1000;
     double checkpoint_x, checkpoint_y;
     std::vector<int> grid_coords(2, 0);
-    for (int i = 0; i <= NUM_CHECKPOINTS; i++) {
-        checkpoint_x = nearest_node.x + (double) i / NUM_CHECKPOINTS * (new_node.x - nearest_node.x);
-        checkpoint_y = nearest_node.y + (double) i / NUM_CHECKPOINTS * (new_node.y - nearest_node.y);
+    for (int i = 0; i <= NUM_CHECKPOINTS; i++)
+    {
+        checkpoint_x = nearest_node.x + (double)i / NUM_CHECKPOINTS * (new_node.x - nearest_node.x);
+        checkpoint_y = nearest_node.y + (double)i / NUM_CHECKPOINTS * (new_node.y - nearest_node.y);
         grid_coords = get_grid_coords(checkpoint_x, checkpoint_y);
-        if (check_occupied(grid_coords[0], grid_coords[1])) {
+        if (check_occupied(grid_coords[0], grid_coords[1]))
+        {
             collision = true;
-            std::cout<< "occupied cell (" << checkpoint_x << ", " << checkpoint_y << ")" << std::endl;
-            std::cout<< "grid coord (" << grid_coords[0] << ", " << grid_coords[1] << ")" << std::endl;
+            std::cout << "occupied cell (" << checkpoint_x << ", " << checkpoint_y << ")" << std::endl;
+            std::cout << "grid coord (" << grid_coords[0] << ", " << grid_coords[1] << ")" << std::endl;
             break;
         }
     }
@@ -375,7 +381,8 @@ bool RRT::check_collision(Node &nearest_node, Node &new_node) {
     return collision;
 }
 
-bool RRT::is_goal(Node &latest_added_node, double goal_x, double goal_y) {
+bool RRT::is_goal(Node &latest_added_node, double goal_x, double goal_y)
+{
     // This method checks if the latest node added to the tree is close
     // enough (defined by goal_threshold) to the goal so we can terminate
     // the search and find a path

@@ -4,9 +4,10 @@
    Input distance in m, angle in rad.
    Because I am looking forward, truncate angles to [-90, 90] degrees.
    Conceptually, index (0, 0), the origin is the position of the car,
-   but it is difficult to index the vector array this way, so we will adjust it. 
+   but it is difficult to index the vector array this way, so we will adjust it.
 */
-std::tuple<int, int> toLocalIndex(const double &distance, const double &angle, const double &resolution, const int &width)
+std::tuple<int, int> toLocalIndex(const double &distance, const double &angle,
+                                  const double &resolution, const int &width)
 {
     std::tuple<int, int> index;
     int xIdx, yIdx;
@@ -23,8 +24,9 @@ std::tuple<int, int> toLocalIndex(const double &distance, const double &angle, c
     return index;
 }
 
-
-geometry_msgs::PointStamped getTransformedPoint(const double &pos_x, const double &pos_y, const geometry_msgs::TransformStamped &transformStamped)
+geometry_msgs::PointStamped
+getTransformedPoint(const double &pos_x, const double &pos_y,
+                    const geometry_msgs::TransformStamped &transformStamped)
 {
     geometry_msgs::PointStamped initialPoint, transformedPoint;
     initialPoint.point.x = pos_x;
@@ -34,7 +36,8 @@ geometry_msgs::PointStamped getTransformedPoint(const double &pos_x, const doubl
     return transformedPoint;
 }
 
-// Computes indices for grids where laserscan crosses, pass by value since swapping things around
+// Computes indices for grids where laserscan crosses, pass by value since
+// swapping things around
 std::vector<std::tuple<int, int>> bresenham(int x0, int y0, int x1, int y1)
 {
     int dx, dy, error, ystep, y;
@@ -49,15 +52,19 @@ std::vector<std::tuple<int, int>> bresenham(int x0, int y0, int x1, int y1)
     // rotate the line
     if (is_steep)
     {
-        x0, y0 = y0, x0;
-        x1, y1 = y1, x1;
+        std::swap(x0, y0);
+        std::swap(x1, y1);
+        // x0, y0 = y0, x0;
+        // x1, y1 = y1, x1;
     }
 
     swapped = false;
     if (x0 > x1)
     {
-        x0, x1 = x1, x0;
-        y0, y1 = y1, y0;
+        std::swap(x0, x1);
+        std::swap(y0, y1);
+        // x0, x1 = x1, x0;
+        // y0, y1 = y1, y0;
         swapped = true;
     }
 
