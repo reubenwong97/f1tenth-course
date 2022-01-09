@@ -16,7 +16,10 @@
 #include <ackermann_msgs/AckermannDriveStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/OccupancyGrid.h>
-#include <tf/transform_listener.h>
+// #include <tf/transform_listener.h>
+#include <tf2_ros/transform_listener.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Twist.h>
 #include <visualization_msgs/Marker.h>
 
 // standard
@@ -53,6 +56,14 @@ private:
 
     double fov;
 
+    // frame names
+    std::string local_frame = "base_link";
+    std::string global_frame = "map";
+    geometry_msgs::TransformStamped transformStamped;
+
+    tf2_ros::Buffer tfBuffer;
+    tf2_ros::TransformListener tfListener;
+
     // ros pub/sub
     // TODO: add the publishers and subscribers you need
 
@@ -71,9 +82,9 @@ private:
     // grid params
     int height, width;
     double resolution;
-    double origin_x, origin_y;
+    double origin_x, origin_y, top_left_x, top_left_y;
     // last pose for publishing map
-    // nav_msgs::Odometry last_pose;
+    nav_msgs::Odometry last_pose;
     bool pose_set = false;
     // double last_posx, last_posy, last_orw, last_orx, last_ory, last_orz;
 
@@ -81,7 +92,7 @@ private:
     bool publish_grid;
 
     // tf stuff
-    tf::TransformListener listener;
+    // tf::TransformListener listener;
 
     // TODO: create RRT params
     std::vector<std::vector<int>> occupancy_grid_static;
