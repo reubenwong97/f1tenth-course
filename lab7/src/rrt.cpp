@@ -65,6 +65,10 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())()), tfListen
     top_left_x = origin_x + resolution * width;
     top_left_y = origin_y + resolution * height;
 
+    std::cout << "height" << height << "\n";
+    std::cout << "width" << width << "\n";
+    std::cout << "flattened size" << map_message.data.size() << std::endl;
+
     occupancy_grid_static = unflatten(map_message.data, height, width);
 
     occupancy_grid = occupancy_grid_static;
