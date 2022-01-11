@@ -11,6 +11,7 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "rrt");
     ros::NodeHandle nh;
+    // std::cout << "In RRT Node" << std::endl;
     RRT rrt(nh);
     ros::spin();
     return 0;

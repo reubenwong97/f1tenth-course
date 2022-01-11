@@ -131,10 +131,18 @@ private:
     std::vector<int> near(std::vector<Node> &tree, Node &node);
     std::vector<int> flatten(const std::vector<std::vector<int>> &matrix);
     std::vector<std::vector<int>> unflatten(const std::vector<int8_t> &array, int height, int width);
+
+    // co-ordinate handling functions
     std::vector<int> get_grid_coords(double global_x, double global_y);
     bool check_occupied(int grid_x, int grid_y);
     std::tuple<int, int> toGlobalIndex(const double &distance, const double &angle,
-                                   const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
+                                       const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
+    // global coords as defined in simulator
+    std::tuple<int, int> global_to_global_coords(const double &global_x, const double &global_y);
+    // world coords as per the usual cartesian coord system
+    std::tuple<int, int> global_coords_to_world_coords(const std::tuple<int, int> &global_coords);
+    // matrix coords for indexing matrices in [row, col] format
+    std::tuple<int, int> world_coords_to_matrix_coords(const std::tuple<int, int> &world_coords);
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);

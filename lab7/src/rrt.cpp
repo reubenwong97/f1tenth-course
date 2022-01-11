@@ -22,7 +22,6 @@ RRT::~RRT()
 // Constructor of the RRT class
 RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())()), tfListener(tfBuffer)
 {
-
     // TODO: Load parameters from yaml file, you could add your own parameters to the rrt_params.yaml file
     nh_.getParam("pose_topic", pose_topic);
     nh_.getParam("scan_topic", scan_topic);
@@ -65,9 +64,9 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())()), tfListen
     top_left_x = origin_x + resolution * width;
     top_left_y = origin_y + resolution * height;
 
-    std::cout << "height" << height << "\n";
-    std::cout << "width" << width << "\n";
-    std::cout << "flattened size" << map_message.data.size() << std::endl;
+    // std::cout << "height" << height << "\n";
+    // std::cout << "width" << width << "\n";
+    // std::cout << "flattened size" << map_message.data.size() << std::endl;
 
     occupancy_grid_static = unflatten(map_message.data, height, width);
 
@@ -345,6 +344,32 @@ std::vector<int> RRT::get_grid_coords(double global_x, double global_y)
     int grid_y = std::floor((global_x - origin_x) / resolution); // the grid visualization is flipped
     int grid_x = std::floor((global_y - origin_y) / resolution);
     return {grid_x, grid_y};
+}
+
+std::tuple<int, int> RRT::global_to_global_coords(const double &global_x, const double &global_y)
+{
+    int grid_x = std::floor((global_x - origin_x) / resolution);
+    int grid_y = std::floor((global_y - origin_y) / resolution);
+
+    return std::make_tuple(grid_x, grid_y);
+}
+
+std::tuple<int, int> RRT::global_coords_to_world_coords(const std::tuple<int, int> &global_coords)
+{
+    int world_x, world_y;
+    world_y = std::get<0>(global_coords); // y in world coords same as x in global coords
+    world_x = (width - 1) - std::get<1>(global_coords);
+
+    return std::make_tuple(world_x, world_y);
+}
+
+std::tuple<int, int> RRT::world_coords_to_matrix_coords(const std::tuple<int, int> &world_coords)
+{
+    int matrix_row, matrix_col;
+    matrix_col = std::get<0>(world_coords); // col no. same as world x
+    matrix_row = (height - 1) - std::get<1>(world_coords);
+
+    return std::make_tuple(matrix_row, matrix_col);
 }
 
 bool RRT::check_occupied(int grid_x, int grid_y)
