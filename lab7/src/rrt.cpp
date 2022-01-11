@@ -61,8 +61,10 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())()), tfListen
     resolution = map_message.info.resolution;
     origin_x = map_message.info.origin.position.x;
     origin_y = map_message.info.origin.position.y;
-    top_left_x = origin_x + resolution * width;
-    top_left_y = origin_y + resolution * height;
+    // top_left_x = origin_x + resolution * width;
+    // top_left_y = origin_y + resolution * height;
+    global_coords_origin = global_to_global_coords(origin_x, origin_y); // [0, 0]
+    world_origin = global_coords_to_world_coords(global_coords_origin); // [2047, 0]
 
     // std::cout << "height" << height << "\n";
     // std::cout << "width" << width << "\n";
@@ -94,10 +96,11 @@ std::vector<double> RRT::truncateFOV(const sensor_msgs::LaserScan::ConstPtr &sca
 }
 
 /* NOTE: Origin is at the bottom right corner of the map
+   Returns coordinate endpoints in global coordinate system
 */
-std::tuple<int, int> RRT::toGlobalIndex(const double &distance,
-                                        const double &angle,
-                                        const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg)
+std::tuple<int, int> RRT::get_endpoint(const double &distance,
+                                       const double &angle,
+                                       const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg)
 {
     // get position of car in global frame
     double local_pos_x, local_pos_y, global_pos_x, global_pos_y, end_x, end_y;
@@ -119,13 +122,15 @@ std::tuple<int, int> RRT::toGlobalIndex(const double &distance,
     end_x = x_lidar + distance * std::cos(global_angle);
     end_y = y_lidar + distance * std::sin(global_angle);
 
-    std::vector<int> grid_coords = get_grid_coords(end_x, end_y);
+    std::tuple<int, int> global_coords = global_to_global_coords(end_x, end_y);
+    // std::vector<int> grid_coords = get_grid_coords(end_x, end_y);
 
-    x_idx = grid_coords[0];
-    y_idx = grid_coords[1];
-    index = std::make_tuple(x_idx, y_idx);
+    // x_idx = grid_coords[0];
+    // y_idx = grid_coords[1];
+    // index = std::make_tuple(x_idx, y_idx);
 
-    return index;
+    // return index;
+    return global_coords;
 }
 
 std::vector<int> RRT::flatten(const std::vector<std::vector<int>> &matrix)
@@ -195,24 +200,30 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
         {
             // find hit points of each scan
             int x, y;
-            std::tuple<int, int> endpoint;
+            std::tuple<int, int> endpoint, world_endpoint;
             std::vector<std::tuple<int, int>> coords;
             // endpoint needs to be saved to set those locations as occupied since bresenham frees them
-            endpoint = toGlobalIndex(range, angle, transformStamped, last_pose);
-            x = std::get<0>(endpoint);
-            y = std::get<1>(endpoint);
+            endpoint = get_endpoint(range, angle, transformStamped, last_pose); // endpoints in global grid system
+            world_endpoint = global_coords_to_world_coords(endpoint);
+            x = std::get<0>(world_endpoint);
+            y = std::get<1>(world_endpoint);
             angle = angle + angle_increment;
 
-            coords = bresenham(0, 0, x, y);
+            // get coordinates in world coordinate system
+            coords = bresenham(std::get<0>(world_origin), std::get<1>(world_origin), x, y);
             for (std::tuple<int, int> coord : coords)
             {
                 int row, col;
-                row = std::get<0>(coord);
-                col = std::get<1>(coord);
+                std::tuple<int, int> matrix_coords;
+                matrix_coords = world_coords_to_matrix_coords(coord);
+                row = std::get<0>(matrix_coords);
+                col = std::get<1>(matrix_coords);
 
                 occupancy_grid[row][col] = FREE; // set to empty
             }
-
+            std::tuple<int, int> matrix_occupied = world_coords_to_matrix_coords(world_endpoint);
+            x = std::get<0>(matrix_occupied);
+            y = std::get<1>(matrix_occupied);
             occupancy_grid[x][y] = OCCUPIED; // set to occupied
         }
         publishOccupancy(occupancy_grid);

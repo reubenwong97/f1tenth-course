@@ -83,6 +83,7 @@ private:
     int height, width;
     double resolution;
     double origin_x, origin_y, top_left_x, top_left_y;
+    std::tuple<int, int> world_origin, global_coords_origin;
     // last pose for publishing map
     nav_msgs::Odometry last_pose;
     double heading_current;
@@ -135,8 +136,8 @@ private:
     // co-ordinate handling functions
     std::vector<int> get_grid_coords(double global_x, double global_y);
     bool check_occupied(int grid_x, int grid_y);
-    std::tuple<int, int> toGlobalIndex(const double &distance, const double &angle,
-                                       const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
+    std::tuple<int, int> get_endpoint(const double &distance, const double &angle,
+                                      const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
     // global coords as defined in simulator
     std::tuple<int, int> global_to_global_coords(const double &global_x, const double &global_y);
     // world coords as per the usual cartesian coord system
