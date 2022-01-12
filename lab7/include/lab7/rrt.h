@@ -18,9 +18,14 @@
 #include <nav_msgs/OccupancyGrid.h>
 // #include <tf/transform_listener.h>
 #include <tf2_ros/transform_listener.h>
+#include <tf2/impl/convert.h>
+#include <tf2/impl/utils.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <visualization_msgs/Marker.h>
+#include <lab7/pose2d.h>
 
 // standard
 #include <math.h>
@@ -75,6 +80,7 @@ private:
     ros::Publisher waypoint_pub_;
     ros::Publisher lines_pub_;
     ros::Publisher map_viz_pub_;
+    ros::Publisher test_pub_;
 
     // topics
     std::string pose_topic, scan_topic, drive_topic, env_viz, dynamic_viz, static_viz, tree_lines, map_viz_topic, map_topic;
@@ -84,8 +90,13 @@ private:
     double resolution;
     double origin_x, origin_y, top_left_x, top_left_y;
     std::tuple<int, int> world_origin, global_coords_origin;
+    double roll, pitch, yaw;
     // last pose for publishing map
     nav_msgs::Odometry last_pose;
+
+    Pose2D origin;
+    double origin_c, origin_s;
+
     double heading_current;
     bool pose_set = false;
     // double last_posx, last_posy, last_orw, last_orx, last_ory, last_orz;
@@ -137,7 +148,7 @@ private:
     std::vector<int> get_grid_coords(double global_x, double global_y);
     bool check_occupied(int grid_x, int grid_y);
     std::tuple<int, int> get_endpoint(const double &distance, const double &angle,
-                                      const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
+                                      const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg, bool raw = false);
     // global coords as defined in simulator
     std::tuple<int, int> global_to_global_coords(const double &global_x, const double &global_y);
     // world coords as per the usual cartesian coord system
@@ -147,6 +158,13 @@ private:
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);
+
+    // test some functions with inspiration from the simulator
+    void xy_to_row_col(double x, double y, int *row, int *col);
+    int row_col_to_cell(int row, int col);
+    int xy_to_cell(double x, double y);
+
+    void publish_marker(double x, double y);
 };
 
 double findDistance(double a, double b, double angle);

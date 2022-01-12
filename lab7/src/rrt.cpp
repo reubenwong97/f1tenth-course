@@ -45,6 +45,7 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())()), tfListen
     // waypoint_pub_ = nh_.advertise<visualization_msgs::Marker>(static_viz, 1000);
     // lines_pub_ = nh_.advertise<visualization_msgs::Marker>(tree_lines, 1000);
     map_viz_pub_ = nh_.advertise<nav_msgs::OccupancyGrid>(map_viz_topic, 1000);
+    test_pub_ = nh_.advertise<visualization_msgs::Marker>("visualization_marker", 0);
 
     // ROS subscribers
     // TODO: create subscribers as you need
@@ -56,6 +57,16 @@ RRT::RRT(ros::NodeHandle &nh) : nh_(nh), gen((std::random_device())()), tfListen
     // TODO: create a occupancy grid
     // save empty grid for easy reset during scan callback (grid size [500,200])
     // grid params
+
+    // Inspiration from simulator.cpp
+    origin.x = map_message.info.origin.position.x;
+    origin.y = map_message.info.origin.position.y;
+    geometry_msgs::Quaternion q = map_message.info.origin.orientation;
+    tf2::Quaternion quat(q.x, q.y, q.z, q.w);
+    origin.theta = tf2::impl::getYaw(quat);
+    origin_c = std::cos(origin.theta);
+    origin_s = std::sin(origin.theta);
+
     height = map_message.info.height;
     width = map_message.info.width;
     resolution = map_message.info.resolution;
@@ -100,7 +111,7 @@ std::vector<double> RRT::truncateFOV(const sensor_msgs::LaserScan::ConstPtr &sca
 */
 std::tuple<int, int> RRT::get_endpoint(const double &distance,
                                        const double &angle,
-                                       const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg)
+                                       const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg, bool raw)
 {
     // get position of car in global frame
     double local_pos_x, local_pos_y, global_pos_x, global_pos_y, end_x, end_y;
@@ -112,17 +123,40 @@ std::tuple<int, int> RRT::get_endpoint(const double &distance,
     global_pos_x = car_pos.point.x;
     global_pos_y = car_pos.point.y;
 
-    std::tuple<int, int> index;
+    // std::tuple<int, int> global_index = global_to_global_coords(global_pos_x, global_pos_y);
+    // std::tuple<int, int> world_index = global_coords_to_world_coords(global_index);
+
+    // std::cout << "car global position: " << global_pos_x << ", " << global_pos_y << "\n";
+    // std::cout << "car global index: " << std::get<0>(global_index) << ", " << std::get<1>(global_index) << "\n";
+    // std::cout << "car world index: " << std::get<0>(world_index) << ", " << std::get<1>(world_index) << std::endl;
+
+    // std::tuple<int, int> index;
 
     double rear_to_lidar = 0.29275;
-    double x_lidar = global_pos_x + rear_to_lidar * std::cos(heading_current);
-    double y_lidar = global_pos_y + rear_to_lidar * std::sin(heading_current);
-    double global_angle = angle + heading_current;
+    // double x_lidar = global_pos_x + rear_to_lidar * std::cos(heading_current);
+    // double y_lidar = global_pos_y + rear_to_lidar * std::sin(heading_current);
+    double x_lidar = global_pos_x + rear_to_lidar * std::cos(yaw);
+    double y_lidar = global_pos_y + rear_to_lidar * std::sin(yaw);
+    // double global_angle = angle + heading_current;
+    double global_angle = angle + yaw;
 
     end_x = x_lidar + distance * std::cos(global_angle);
     end_y = y_lidar + distance * std::sin(global_angle);
 
-    std::tuple<int, int> global_coords = global_to_global_coords(end_x, end_y);
+    // std::cout << heading_current << " " << yaw << std::endl;
+
+    // end_x = x_lidar + distance * std::cos(angle - toRadians(90));
+    // end_y = y_lidar + distance * std::sin(angle - toRadians(90));
+
+    std::tuple<int, int> global_coords;
+    if (raw)
+    {
+        global_coords = std::make_tuple(end_x, end_y);
+    }
+    else
+    {
+        global_coords = global_to_global_coords(end_x, end_y);
+    }
     // std::vector<int> grid_coords = get_grid_coords(end_x, end_y);
 
     // x_idx = grid_coords[0];
@@ -186,28 +220,41 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
     {
         ROS_WARN("%s", ex.what());
     }
+    // std::cout << "angle increment: " << scan_msg->angle_increment << "\n";
+    // std::cout << "scan at min angle: " << scan_msg->ranges[310] << "\n";
+    // std::cout << "scan at max angle: " << scan_msg->ranges[scan_msg->ranges.size() - 310] << std::endl;
 
-    double fov_min = 0, fov_max = 0, angle_increment = 0, angle = toRadians(-90);
-    std::vector<double> truncatedRanges = truncateFOV(scan_msg, fov_min, fov_max, angle_increment);
+    double fov_min = 0, fov_max = 0, angle_increment = 0, angle = scan_msg->angle_min;
+    // std::vector<double> truncatedRanges = truncateFOV(scan_msg, fov_min, fov_max, angle_increment);
 
     // TODO: update your occupancy grid
     occupancy_grid = occupancy_grid_static;
     double rear_to_lidar = 0.29275; // not sure how to use for now
 
+    // int *end_row, *end_col;
     if (pose_set)
     {
-        for (double range : truncatedRanges)
+        // for (double range : scan_msg->ranges)
+        for (int i = 0; i < scan_msg->ranges.size(); i++)
         {
             // find hit points of each scan
             int x, y;
             std::tuple<int, int> endpoint, world_endpoint;
             std::vector<std::tuple<int, int>> coords;
             // endpoint needs to be saved to set those locations as occupied since bresenham frees them
-            endpoint = get_endpoint(range, angle, transformStamped, last_pose); // endpoints in global grid system
+            endpoint = get_endpoint(scan_msg->ranges[i], scan_msg->angle_min + i * scan_msg->angle_increment, transformStamped, last_pose); // endpoints in global grid system
+            if (i == std::floor(scan_msg->ranges.size() / 2))
+            {
+                endpoint = get_endpoint(scan_msg->ranges[i], scan_msg->angle_min + i * scan_msg->angle_increment, transformStamped, last_pose, true);
+                std::cout
+                    << "Publishing global x: " << std::get<0>(endpoint) << " Publishing global y: " << std::get<1>(endpoint) << std::endl;
+                publish_marker(std::get<0>(endpoint), std::get<1>(endpoint));
+            }
             world_endpoint = global_coords_to_world_coords(endpoint);
             x = std::get<0>(world_endpoint);
             y = std::get<1>(world_endpoint);
-            angle = angle + angle_increment;
+            // angle = angle + angle_increment;
+            // angle = angle + scan_msg->angle_increment;
 
             // get coordinates in world coordinate system
             coords = bresenham(std::get<0>(world_origin), std::get<1>(world_origin), x, y);
@@ -222,8 +269,10 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
                 occupancy_grid[row][col] = FREE; // set to empty
             }
             std::tuple<int, int> matrix_occupied = world_coords_to_matrix_coords(world_endpoint);
+            // xy_to_row_col(std::get<0>(endpoint), std::get<1>(endpoint), end_row, end_col);
             x = std::get<0>(matrix_occupied);
             y = std::get<1>(matrix_occupied);
+            // std::cout << *end_row << std::endl;
             occupancy_grid[x][y] = OCCUPIED; // set to occupied
         }
         publishOccupancy(occupancy_grid);
@@ -289,6 +338,17 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     double siny_cosp = 2.0 * (last_pose.pose.pose.orientation.w * last_pose.pose.pose.orientation.z + last_pose.pose.pose.orientation.x * last_pose.pose.pose.orientation.y);
     double cosy_cosp = 1.0 - 2.0 * (last_pose.pose.pose.orientation.y * last_pose.pose.pose.orientation.y + last_pose.pose.pose.orientation.z * last_pose.pose.pose.orientation.z);
     heading_current = std::atan2(siny_cosp, cosy_cosp);
+
+    tf2::Quaternion q(
+        pose_msg->pose.pose.orientation.x,
+        pose_msg->pose.pose.orientation.y,
+        pose_msg->pose.pose.orientation.z,
+        pose_msg->pose.pose.orientation.w);
+
+    tf2::Matrix3x3 m(q);
+    m.getRPY(roll, pitch, yaw);
+
+    // std::cout << "heading_current: " << heading_current << std::endl;
 }
 
 std::vector<double> RRT::sample()
@@ -505,3 +565,61 @@ std::vector<int> RRT::near(std::vector<Node> &tree, Node &node)
 double toDegrees(double r) { return r * 180 / PI; }
 
 double toRadians(double d) { return d * PI / 180; }
+
+void RRT::xy_to_row_col(double x, double y, int *row, int *col)
+{
+    // Translate the state by the origin
+    double x_trans = x - origin.x;
+    double y_trans = y - origin.y;
+
+    // Rotate the state into the map
+    double x_rot = x_trans * origin_c + y_trans * origin_s;
+    double y_rot = -x_trans * origin_s + y_trans * origin_c;
+
+    // Clip the state to be a cell
+    if (x_rot < 0 or x_rot >= width * resolution or
+        y_rot < 0 or y_rot >= height * resolution)
+    {
+        *col = -1;
+        *row = -1;
+    }
+    else
+    {
+        // Discretize the state into row and column
+        *col = std::floor(x_rot / resolution);
+        *row = std::floor(y_rot / resolution);
+    }
+}
+
+int RRT::row_col_to_cell(int row, int col)
+{
+    return row * width + col;
+}
+
+int RRT::xy_to_cell(double x, double y)
+{
+    int row, col;
+    xy_to_row_col(x, y, &row, &col);
+    return row_col_to_cell(row, col);
+}
+
+void RRT::publish_marker(double x, double y)
+{
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "base_link";
+    marker.header.stamp = ros::Time();
+    marker.type = visualization_msgs::Marker::SPHERE;
+
+    marker.pose.position.x = x;
+    marker.pose.position.y = y;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = 5;
+    marker.scale.y = 5;
+    marker.scale.z = 5;
+    marker.color.a = 1.0; // Don't forget to set the alpha!
+
+    test_pub_.publish(marker);
+}
