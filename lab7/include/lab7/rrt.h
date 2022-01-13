@@ -18,6 +18,7 @@
 #include <nav_msgs/OccupancyGrid.h>
 // #include <tf/transform_listener.h>
 #include <tf2_ros/transform_listener.h>
+#include <tf2/impl/utils.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <visualization_msgs/Marker.h>
@@ -55,6 +56,7 @@ private:
     ros::NodeHandle nh_;
 
     double fov;
+    double min_goal_distance;
 
     // frame names
     std::string local_frame = "base_link";
@@ -134,7 +136,7 @@ private:
     std::vector<int> get_grid_coords(double global_x, double global_y);
     bool check_occupied(int grid_x, int grid_y);
     std::tuple<int, int> toGlobalIndex(const double &distance, const double &angle,
-                                   const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
+                                       const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);
