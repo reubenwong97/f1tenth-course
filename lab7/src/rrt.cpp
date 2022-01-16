@@ -13,14 +13,16 @@
 #define PI 3.1415927
 
 // Destructor of the RRT class
-RRT::~RRT() {
+RRT::~RRT()
+{
   // Do something in here, free up used memory, print message, etc.
   ROS_INFO("RRT shutting down");
 }
 
 // Constructor of the RRT class
 RRT::RRT(ros::NodeHandle &nh)
-    : nh_(nh), gen((std::random_device())()), tfListener(tfBuffer) {
+    : nh_(nh), gen((std::random_device())()), tfListener(tfBuffer)
+{
 
   // TODO: Load parameters from yaml file, you could add your own parameters to
   // the rrt_params.yaml file
@@ -49,6 +51,7 @@ RRT::RRT(ros::NodeHandle &nh)
   // 1000); lines_pub_ = nh_.advertise<visualization_msgs::Marker>(tree_lines,
   // 1000);
   map_viz_pub_ = nh_.advertise<nav_msgs::OccupancyGrid>(map_viz_topic, 1000);
+  point_pub_ = nh_.advertise<visualization_msgs::Marker>("/test_point", 1000);
 
   // ROS subscribers
   // TODO: create subscribers as you need
@@ -82,7 +85,8 @@ RRT::RRT(ros::NodeHandle &nh)
 
 std::vector<double>
 RRT::truncateFOV(const sensor_msgs::LaserScan::ConstPtr &scan_msg,
-                 double &fov_min, double &fov_max, double &angle_increment) {
+                 double &fov_min, double &fov_max, double &angle_increment)
+{
   double fov_half = toRadians(fov / 2);
   int min_fov_idx = static_cast<int>((-fov_half - scan_msg->angle_min) /
                                      scan_msg->angle_increment);
@@ -104,7 +108,8 @@ RRT::truncateFOV(const sensor_msgs::LaserScan::ConstPtr &scan_msg,
 std::tuple<int, int>
 RRT::toGlobalIndex(const double &distance, const double &angle,
                    const geometry_msgs::TransformStamped &transformStamped,
-                   const nav_msgs::Odometry &pose_msg) {
+                   const nav_msgs::Odometry &pose_msg)
+{
   // get position of car in global frame
   double local_pos_x, local_pos_y, global_pos_x, global_pos_y, end_x, end_y;
   int x_idx, y_idx;
@@ -134,7 +139,8 @@ RRT::toGlobalIndex(const double &distance, const double &angle,
   return index;
 }
 
-std::vector<int> RRT::flatten(const std::vector<std::vector<int>> &matrix) {
+std::vector<int> RRT::flatten(const std::vector<std::vector<int>> &matrix)
+{
   std::size_t total_size = 0;
   for (const auto &sub : matrix)
     total_size += sub.size();
@@ -148,13 +154,16 @@ std::vector<int> RRT::flatten(const std::vector<std::vector<int>> &matrix) {
 
 // convert 1D array into 2D matrix
 std::vector<std::vector<int>> RRT::unflatten(const std::vector<int8_t> &array,
-                                             int height, int width) {
+                                             int height, int width)
+{
   std::vector<std::vector<int>> res(height, std::vector<int>(width, FREE));
-  for (int k = 0; k < array.size(); k++) {
+  for (int k = 0; k < array.size(); k++)
+  {
     int i = k / width;
     int j = k % width;
     res[i][j] = array[k];
-    if ((array[k] != FREE) && (array[k] != OCCUPIED)) {
+    if ((array[k] != FREE) && (array[k] != OCCUPIED))
+    {
       res[i][j] = OCCUPIED; // assume occupied for weird values
     }
   }
@@ -169,15 +178,19 @@ std::vector<std::vector<int>> RRT::unflatten(const std::vector<int8_t> &array,
   return res;
 }
 
-void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg) {
+void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
+{
   // The scan callback, update your occupancy grid here
   // Args:
   //    scan_msg (*LaserScan): pointer to the incoming scan message
-  try {
+  try
+  {
     // acquire transform to convert local frame to global frame
     transformStamped =
         tfBuffer.lookupTransform(global_frame, local_frame, ros::Time(0));
-  } catch (tf2::TransformException &ex) {
+  }
+  catch (tf2::TransformException &ex)
+  {
     ROS_WARN("%s", ex.what());
   }
 
@@ -189,8 +202,10 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg) {
   occupancy_grid = occupancy_grid_static;
   double rear_to_lidar = 0.29275; // not sure how to use for now
 
-  if (pose_set) {
-    for (double range : truncatedRanges) {
+  if (pose_set)
+  {
+    for (double range : truncatedRanges)
+    {
       // find hit points of each scan
       int x, y;
       std::tuple<int, int> endpoint;
@@ -203,7 +218,8 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg) {
       angle = angle + angle_increment;
 
       coords = bresenham(0, 0, x, y);
-      for (std::tuple<int, int> coord : coords) {
+      for (std::tuple<int, int> coord : coords)
+      {
         int row, col;
         row = std::get<0>(coord);
         col = std::get<1>(coord);
@@ -217,7 +233,8 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg) {
   }
 }
 
-void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid) {
+void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid)
+{
   nav_msgs::OccupancyGrid grid_msg;
   std::vector<int> flattened;
   grid_msg.header.stamp = ros::Time::now();
@@ -247,7 +264,8 @@ void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid) {
 }
 
 // void RRT::pf_callback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg)
-void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg) {
+void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
+{
   // The pose callback when subscribed to particle filter's inferred pose
   // The RRT main loop happens here
   // Args:
@@ -255,14 +273,15 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg) {
   // Returns:
   //
 
+  last_pose = *pose_msg; // multiple methods require access to pose
+  pose_set = true;
   // tree as std::vector
   std::vector<Node> tree;
 
   // TODO: fill in the RRT main loop
+  std::vector<double> sampled_points = sample();
 
-  // path found as Path message
-  last_pose = *pose_msg;
-  pose_set = true;
+  // std::cout << last_pose.pose.pose.position.x << " " << last_pose.pose.pose.position.y << std::endl;
   // ROS_INFO_STREAM("pose has been set");
   // std::cout << "pose has been set" << std::endl;
   // last_posx = pose_msg->pose.pose.position.x;
@@ -285,7 +304,8 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg) {
   heading_current = tf2::impl::getYaw(quat); // heading_current = yaw
 }
 
-std::vector<double> RRT::sample() {
+std::vector<double> RRT::sample() // WORKS
+{
   // This method returns a sampled point from the free space
   // You should restrict so that it only samples a small region
   // of interest around the car's current position
@@ -293,21 +313,71 @@ std::vector<double> RRT::sample() {
   // Returns:
   //     sampled_point (std::vector<double>): the sampled point in free space
 
+  // sample points locally in front of the car
   double x_bound_top, x_bound_bot, y_bound_left, y_bound_right;
+  double sx, sy, gx, gy;
   x_bound_top = 2.5;
   x_bound_bot = 0;
   y_bound_left = 0.8;
   y_bound_right = -0.75;
   std::vector<double> sampled_point;
-  // TODO: fill in this method
-  // look up the documentation on how to use std::mt19937 devices with a
-  // distribution the generator and the distribution is created for you (check
-  // the header file)
+  std::uniform_real_distribution<> dis_x(x_bound_bot, x_bound_top);
+  std::uniform_real_distribution<> dis_y(y_bound_left, y_bound_right);
+
+  sx = dis_x(gen); // sample locally
+  sy = dis_y(gen);
+
+  geometry_msgs::PointStamped sampledPoint = getTransformedPoint(sx, sy, transformStamped);
+  gx = sampledPoint.point.x;
+  gy = sampledPoint.point.y;
+
+  publishPoint(gx, gy, 255, 0, 0); // publish red point for visualisation
+
+  sampled_point.push_back(gx);
+  sampled_point.push_back(gy);
 
   return sampled_point;
 }
 
-int RRT::nearest(std::vector<Node> &tree, std::vector<double> &sampled_point) {
+void RRT::publishPoint(const double &x, const double &y, const int &r, const int &g, const int &b)
+{
+  visualization_msgs::Marker marker;
+
+  marker.header.frame_id = "map";
+  marker.header.stamp = ros::Time();
+  marker.type = visualization_msgs::Marker::CUBE;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  geometry_msgs::Pose pos;
+  pos.position.x = x;
+  pos.position.y = y;
+  pos.position.z = 0;
+  pos.orientation.x = 0;
+  pos.orientation.y = 0;
+  pos.orientation.z = 0;
+  pos.orientation.w = 1;
+  marker.pose = pos;
+
+  geometry_msgs::Vector3 scale;
+  scale.x = 0.4;
+  scale.y = 0.4;
+  scale.z = 0.4;
+  marker.scale = scale;
+
+  std_msgs::ColorRGBA colour;
+  colour.r = r;
+  colour.g = g;
+  colour.b = b;
+  colour.a = 1;
+  marker.color = colour;
+
+  marker.lifetime.sec = 0;
+  marker.frame_locked = true;
+  point_pub_.publish(marker);
+}
+
+int RRT::nearest(std::vector<Node> &tree, std::vector<double> &sampled_point)
+{
   // This method returns the nearest node on the tree to the sampled point
   // Args:
   //     tree (std::vector<Node>): the current RRT tree
@@ -324,7 +394,8 @@ int RRT::nearest(std::vector<Node> &tree, std::vector<double> &sampled_point) {
   return nearest_node;
 }
 
-Node RRT::steer(Node &nearest_node, std::vector<double> &sampled_point) {
+Node RRT::steer(Node &nearest_node, std::vector<double> &sampled_point)
+{
   // The function steer:(x,y)->z returns a point such that z is “closer”
   // to y than x is. The point z returned by the function steer will be
   // such that z minimizes ||z−y|| while at the same time maintaining
@@ -344,7 +415,8 @@ Node RRT::steer(Node &nearest_node, std::vector<double> &sampled_point) {
   return new_node;
 }
 
-std::vector<int> RRT::get_grid_coords(double global_x, double global_y) {
+std::vector<int> RRT::get_grid_coords(double global_x, double global_y)
+{
   // This method returns the grid coordinates when given the global coordinates
 
   // Args:
@@ -357,13 +429,15 @@ std::vector<int> RRT::get_grid_coords(double global_x, double global_y) {
   return {grid_x, grid_y};
 }
 
-bool RRT::check_occupied(int grid_x, int grid_y) {
+bool RRT::check_occupied(int grid_x, int grid_y)
+{
   // This method checks if a grid cell is occupied when given the grid
   // coordinates
   return occupancy_grid[grid_x][grid_y] == OCCUPIED;
 }
 
-bool RRT::check_collision(Node &nearest_node, Node &new_node) {
+bool RRT::check_collision(Node &nearest_node, Node &new_node)
+{
   // This method returns a boolean indicating if the path between the
   // nearest node and the new node created from steering is collision free
   // Args:
@@ -377,13 +451,15 @@ bool RRT::check_collision(Node &nearest_node, Node &new_node) {
   const int NUM_CHECKPOINTS = 1000;
   double checkpoint_x, checkpoint_y;
   std::vector<int> grid_coords(2, 0);
-  for (int i = 0; i <= NUM_CHECKPOINTS; i++) {
+  for (int i = 0; i <= NUM_CHECKPOINTS; i++)
+  {
     checkpoint_x = nearest_node.x +
                    (double)i / NUM_CHECKPOINTS * (new_node.x - nearest_node.x);
     checkpoint_y = nearest_node.y +
                    (double)i / NUM_CHECKPOINTS * (new_node.y - nearest_node.y);
     grid_coords = get_grid_coords(checkpoint_x, checkpoint_y);
-    if (check_occupied(grid_coords[0], grid_coords[1])) {
+    if (check_occupied(grid_coords[0], grid_coords[1]))
+    {
       collision = true;
       std::cout << "occupied cell (" << checkpoint_x << ", " << checkpoint_y
                 << ")" << std::endl;
@@ -396,7 +472,8 @@ bool RRT::check_collision(Node &nearest_node, Node &new_node) {
   return collision;
 }
 
-bool RRT::is_goal(Node &latest_added_node, double goal_x, double goal_y) {
+bool RRT::is_goal(Node &latest_added_node, double goal_x, double goal_y)
+{
   // This method checks if the latest node added to the tree is close
   // enough (defined by goal_threshold) to the goal so we can terminate
   // the search and find a path
@@ -419,7 +496,8 @@ bool RRT::is_goal(Node &latest_added_node, double goal_x, double goal_y) {
 }
 
 std::vector<Node> RRT::find_path(std::vector<Node> &tree,
-                                 Node &latest_added_node) {
+                                 Node &latest_added_node)
+{
   // This method traverses the tree from the node that has been determined
   // as goal
   // Args:
@@ -436,7 +514,8 @@ std::vector<Node> RRT::find_path(std::vector<Node> &tree,
 }
 
 // RRT* methods
-double RRT::cost(std::vector<Node> &tree, Node &node) {
+double RRT::cost(std::vector<Node> &tree, Node &node)
+{
   // This method returns the cost associated with a node
   // Args:
   //    tree (std::vector<Node>): the current tree
@@ -450,7 +529,8 @@ double RRT::cost(std::vector<Node> &tree, Node &node) {
   return cost;
 }
 
-double RRT::line_cost(Node &n1, Node &n2) {
+double RRT::line_cost(Node &n1, Node &n2)
+{
   // This method returns the cost of the straight line path between two nodes
   // Args:
   //    n1 (Node): the Node at one end of the path
@@ -464,7 +544,8 @@ double RRT::line_cost(Node &n1, Node &n2) {
   return cost;
 }
 
-std::vector<int> RRT::near(std::vector<Node> &tree, Node &node) {
+std::vector<int> RRT::near(std::vector<Node> &tree, Node &node)
+{
   // This method returns the set of Nodes in the neighborhood of a
   // node.
   // Args:

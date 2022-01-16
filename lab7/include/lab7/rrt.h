@@ -77,6 +77,7 @@ private:
     ros::Publisher waypoint_pub_;
     ros::Publisher lines_pub_;
     ros::Publisher map_viz_pub_;
+    ros::Publisher point_pub_; //  for testing
 
     // topics
     std::string pose_topic, scan_topic, drive_topic, env_viz, dynamic_viz, static_viz, tree_lines, map_viz_topic, map_topic;
@@ -140,6 +141,7 @@ private:
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);
+    void publishPoint(const double &x, const double &y, const int &r, const int &g, const int &b);
 };
 
 double findDistance(double a, double b, double angle);

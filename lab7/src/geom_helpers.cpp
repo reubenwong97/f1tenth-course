@@ -33,6 +33,7 @@ getTransformedPoint(const double &pos_x, const double &pos_y,
     initialPoint.point.y = pos_y;
 
     tf2::doTransform(initialPoint, transformedPoint, transformStamped);
+
     return transformedPoint;
 }
 
