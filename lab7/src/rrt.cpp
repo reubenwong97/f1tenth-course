@@ -509,6 +509,15 @@ std::vector<Node> RRT::find_path(std::vector<Node> &tree,
 
   std::vector<Node> found_path;
   // TODO: fill in this method
+  found_path.push_back(latest_added_node);
+  Node next_node = tree[latest_added_node.parent];
+  while (!next_node.is_root)
+  {
+    found_path.push_back(next_node);
+    next_node = tree[next_node.parent];
+  }
+
+  found_path.push_back(tree[0]); // always ends at root
 
   return found_path;
 }
