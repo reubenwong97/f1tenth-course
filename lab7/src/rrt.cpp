@@ -76,15 +76,41 @@ RRT::RRT(ros::NodeHandle &nh)
   top_left_x = origin_x + resolution * width;
   top_left_y = origin_y + resolution * height;
 
-  std::cout << "height" << height << "\n";
-  std::cout << "width" << width << "\n";
-  std::cout << "flattened size" << map_message.data.size() << std::endl;
+  // char tmp[256];
+  // getcwd(tmp, 256);
+  // std::cout << tmp << std::endl;
+  goals = get_goals("/home/reuben/reuben_ws/src/lab7/waypoints_cleaned.csv");
+  // std::cout << goals[0][0] << " " << goals[0][1] << std::endl;
 
   occupancy_grid_static = unflatten(map_message.data, height, width);
 
   occupancy_grid = occupancy_grid_static;
 
   ROS_INFO("Created new RRT Object.");
+}
+
+// REFERENCE: https://www.gormanalysis.com/blog/reading-and-writing-csv-files-with-cpp/#reading-from-csv
+// and: https://stackoverflow.com/questions/53142798/reading-csv-file-to-vector-of-doubles
+std::vector<std::vector<double>> RRT::get_goals(std::string path)
+{
+  std::vector<std::vector<double>> goals;
+  std::ifstream data(path, std::ifstream::in);
+  // std::cout << data.is_open() << std::endl;
+  if (data.is_open())
+  {
+    std::string line;
+    std::vector<double> goal;
+    while (std::getline(data, line)) // break lines by \n
+    {
+      std::stringstream ss(line); // create stringstream for current line
+      std::string str_point;
+      while (getline(ss, str_point, ',')) // break each line by comma
+        goal.emplace_back(std::stold(str_point));
+      goals.emplace_back(goal);
+    }
+  }
+
+  return goals;
 }
 
 std::vector<double>
@@ -279,33 +305,14 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
 
   last_pose = *pose_msg; // multiple methods require access to pose
   pose_set = true;
+  geometry_msgs::Quaternion q = last_pose.pose.pose.orientation;
+  tf2::Quaternion quat(q.x, q.y, q.z, q.w);
+  heading_current = tf2::impl::getYaw(quat); // heading_current = yaw
   // tree as std::vector
   std::vector<Node> tree;
 
   // TODO: fill in the RRT main loop
   std::vector<double> sampled_points = sample();
-
-  // std::cout << last_pose.pose.pose.position.x << " " << last_pose.pose.pose.position.y << std::endl;
-  // ROS_INFO_STREAM("pose has been set");
-  // std::cout << "pose has been set" << std::endl;
-  // last_posx = pose_msg->pose.pose.position.x;
-  // last_posy = pose_msg->pose.pose.position.y;
-  // last_orw = pose_msg->pose.pose.orientation.w;
-  // last_orx = last_pose->pose.pose.orientation.x;
-  // last_ory = last_pose->pose.pose.orientation.y;
-  // last_orz = last_pose->pose.pose.orientation.z;
-
-  // compute current heading
-  // double siny_cosp = 2.0 * (last_pose.pose.pose.orientation.w *
-  // last_pose.pose.pose.orientation.z + last_pose.pose.pose.orientation.x *
-  // last_pose.pose.pose.orientation.y); double cosy_cosp = 1.0 - 2.0 *
-  // (last_pose.pose.pose.orientation.y * last_pose.pose.pose.orientation.y +
-  // last_pose.pose.pose.orientation.z * last_pose.pose.pose.orientation.z);
-  // heading_current = std::atan2(siny_cosp, cosy_cosp);
-
-  geometry_msgs::Quaternion q = last_pose.pose.pose.orientation;
-  tf2::Quaternion quat(q.x, q.y, q.z, q.w);
-  heading_current = tf2::impl::getYaw(quat); // heading_current = yaw
 }
 
 std::vector<double> RRT::sample() // WORKS

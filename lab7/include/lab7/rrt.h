@@ -31,6 +31,9 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+// #include <experimental/filesystem>
+#include <filesystem>
+#include <iomanip>
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <random>
@@ -57,6 +60,7 @@ private:
 
     double fov;
     double min_goal_distance, steer_length, lookahead_distance;
+    std::vector<std::vector<double>> goals;
 
     // frame names
     std::string local_frame = "base_link";
@@ -139,6 +143,7 @@ private:
     std::tuple<int, int> toGlobalIndex(const double &distance, const double &angle,
                                        const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
     double euclidean_distance(const double &x1, const double &y1, const double &x2, const double &y2);
+    std::vector<std::vector<double>> get_goals(std::string path);
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);
