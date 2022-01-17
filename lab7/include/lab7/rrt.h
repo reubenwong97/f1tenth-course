@@ -56,7 +56,7 @@ private:
     ros::NodeHandle nh_;
 
     double fov;
-    double min_goal_distance;
+    double min_goal_distance, steer_length, lookahead_distance;
 
     // frame names
     std::string local_frame = "base_link";
@@ -138,6 +138,7 @@ private:
     bool check_occupied(int grid_x, int grid_y);
     std::tuple<int, int> toGlobalIndex(const double &distance, const double &angle,
                                        const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
+    double euclidean_distance(const double &x1, const double &y1, const double &x2, const double &y2);
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);

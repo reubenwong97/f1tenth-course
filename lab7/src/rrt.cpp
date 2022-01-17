@@ -35,7 +35,11 @@ RRT::RRT(ros::NodeHandle &nh)
   nh_.getParam("tree_lines", tree_lines);
   nh_.getParam("map_viz_topic", map_viz_topic);
   nh_.getParam("map_topic", map_topic);
+
   nh_.getParam("fov", fov);
+  nh_.getParam("min_goal_distance", min_goal_distance);
+  nh_.getParam("steer_length", steer_length);
+  nh_.getParam("lookahead_distance", lookahead_distance);
 
   // flags
   nh_.getParam("publish_grid", publish_grid);
@@ -376,6 +380,11 @@ void RRT::publishPoint(const double &x, const double &y, const int &r, const int
   point_pub_.publish(marker);
 }
 
+double RRT::euclidean_distance(const double &x1, const double &y1, const double &x2, const double &y2)
+{
+  return std::sqrt(std::pow(x1 - x2, 2) + std::pow(y1 - y2, 2));
+}
+
 int RRT::nearest(std::vector<Node> &tree, std::vector<double> &sampled_point)
 {
   // This method returns the nearest node on the tree to the sampled point
@@ -390,6 +399,16 @@ int RRT::nearest(std::vector<Node> &tree, std::vector<double> &sampled_point)
   double sx, sy;
   sx = sampled_point[0];
   sy = sampled_point[1];
+
+  double min_distance = euclidean_distance(tree[0].x, tree[0].y, sx, sy);
+  for (std::size_t i; i < tree.size(); i++)
+  {
+    if (euclidean_distance(tree[i].x, tree[i].y, sx, sy) < min_distance)
+    {
+      min_distance = euclidean_distance(tree[i].x, tree[i].y, sx, sy);
+      nearest_node = i;
+    }
+  }
 
   return nearest_node;
 }
@@ -411,6 +430,9 @@ Node RRT::steer(Node &nearest_node, std::vector<double> &sampled_point)
 
   Node new_node;
   // TODO: fill in this method
+  double euclidean = euclidean_distance(nearest_node.x, nearest_node.y, sampled_point[0], sampled_point[1]);
+  new_node.x = nearest_node.x + steer_length / euclidean * (sampled_point[0] - nearest_node.x);
+  new_node.y = nearest_node.y + steer_length / euclidean * (sampled_point[1] - nearest_node.y);
 
   return new_node;
 }
@@ -486,9 +508,9 @@ bool RRT::is_goal(Node &latest_added_node, double goal_x, double goal_y)
 
   bool close_enough = false;
   // TODO: fill in this method
-  double distance = pow(pow(latest_added_node.x - goal_x, 2) +
-                            pow(latest_added_node.y - goal_y, 2),
-                        0.5);
+  double distance = std::pow(std::pow(latest_added_node.x - goal_x, 2) +
+                                 std::pow(latest_added_node.y - goal_y, 2),
+                             0.5);
   if (distance < min_goal_distance)
     close_enough = true;
 

@@ -13,6 +13,9 @@ map_topic: "/map"
 
 # Driving Params
 fov: 180
+min_goal_distance: 0.5
+steer_length: 0.35
+lookahead_distance: 1.57 
 
 
 # flags for debugging
