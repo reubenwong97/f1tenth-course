@@ -153,8 +153,8 @@ std::vector<double> RRT::get_goalpoint(bool plot)
     }
   }
 
-  if (plot)
-    publishPoint(goal_point[0], goal_point[1], 0, 255, 0);
+  // if (plot)
+  //   publishPoint(goal_point[0], goal_point[1], 0, 255, 0);
 
   return goal_point;
 }
@@ -247,6 +247,7 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   //    pose_msg (*PoseStamped): pointer to the incoming pose message
   // Returns:
   //
+  std::cout << "Inside pf callback" << std::endl;
   try
   {
     // acquire transform to convert local frame to global frame
@@ -278,11 +279,13 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   tree.emplace_back(start);
 
   // get the waypoint
-  std::vector<double> goal = get_goalpoint(true);
+  std::vector<double> goal = get_goalpoint();
+  std::cout << "Goalpoint is: " << goal[0] << ", " << goal[1] << std::endl;
 
   // TODO: fill in the RRT main loop
   for (unsigned int i = 0; i < max_iteration; i++)
   {
+    std::cout << "Calling sample" << std::endl;
     std::vector<double> sampled_point = sample();
     unsigned int nearest_point = nearest(tree, sampled_point);
     Node new_node = steer(tree[nearest_point], sampled_point);
@@ -301,6 +304,7 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   // Perform pure pursuit
   double x_target, y_target;
   std::size_t path_len = paths.size();
+  std::cout << "Path size: " << path_len << std::endl;
   if (path_len == 0)
   {
     // do nothing
@@ -309,6 +313,7 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   {
     for (std::size_t i = 0; i < path_len; i++)
     {
+      std::cout << "Iter..." << i << std::endl;
       double distance = euclidean_distance(paths[path_len - 1 - i].x, paths[path_len - 1 - i].y,
                                            pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
       if (distance >= lookahead_distance)
@@ -320,8 +325,8 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     }
     // PP control
     double target_distance = euclidean_distance(x_target, y_target, pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
-    double lookahead_angle = atan2(y_target - pose_msg->pose.pose.position.y, x_target - pose_msg->pose.pose.position.x);
-    double dy = target_distance * sin(lookahead_angle - heading_current);
+    double lookahead_angle = std::atan2(y_target - pose_msg->pose.pose.position.y, x_target - pose_msg->pose.pose.position.x);
+    double dy = target_distance * std::sin(lookahead_angle - heading_current);
     double angle = 2 * dy / (std::pow(target_distance, 2));
     steer_pure_pursuit(angle);
   }
@@ -365,6 +370,7 @@ std::vector<double> RRT::sample() // WORKS
   gx = sampledPoint.point.x;
   gy = sampledPoint.point.y;
 
+  std::cout << "Sampling..." << gx << ", " << gy << std::endl;
   publishPoint(gx, gy, 255, 0, 0); // publish red point for visualisation
 
   sampled_point.push_back(gx);
