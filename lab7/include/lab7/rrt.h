@@ -59,7 +59,7 @@ private:
     ros::NodeHandle nh_;
 
     double fov;
-    double min_goal_distance, steer_length, lookahead_distance;
+    double min_goal_distance, steer_length, lookahead_distance, max_iteration;
     std::vector<std::vector<double>> goals;
 
     // frame names
@@ -146,6 +146,7 @@ private:
     double euclidean_distance(const double &x1, const double &y1, const double &x2, const double &y2);
     std::vector<std::vector<double>> get_goals(std::string path);
     std::vector<double> get_goalpoint(bool plot = true);
+    void steer_pure_pursuit(const double &angle);
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);

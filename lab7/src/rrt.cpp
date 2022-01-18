@@ -40,6 +40,7 @@ RRT::RRT(ros::NodeHandle &nh)
   nh_.getParam("min_goal_distance", min_goal_distance);
   nh_.getParam("steer_length", steer_length);
   nh_.getParam("lookahead_distance", lookahead_distance);
+  nh_.getParam("max_iteration", max_iteration);
 
   // flags
   nh_.getParam("publish_grid", publish_grid);
@@ -147,10 +148,14 @@ std::vector<double> RRT::get_goalpoint(bool plot)
       }
       else
       {
-        dist[index] = 999999; // set to high value so we skip pass it next time we find the min
+        dist[index] = 999999; // set to high value so we skip past it next time we find the min
       }
     }
   }
+
+  if (plot)
+    publishPoint(goal_point[0], goal_point[1], 0, 255, 0);
+
   return goal_point;
 }
 
@@ -198,20 +203,6 @@ void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
   // The scan callback, update your occupancy grid here
   // Args:
   //    scan_msg (*LaserScan): pointer to the incoming scan message
-  try
-  {
-    // acquire transform to convert local frame to global frame
-    transformStamped =
-        tfBuffer.lookupTransform(global_frame, local_frame, ros::Time(0));
-    // also acquire to convert to local frame
-    localTransformStamped =
-        tfBuffer.lookupTransform(local_frame, global_frame, ros::Time(0));
-  }
-  catch (tf2::TransformException &ex)
-  {
-    ROS_WARN("%s", ex.what());
-  }
-
   // TODO: update your occupancy grid
   occupancy_grid = occupancy_grid_static;
   double rear_to_lidar = 0.29275; // not sure how to use for now
@@ -256,6 +247,19 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   //    pose_msg (*PoseStamped): pointer to the incoming pose message
   // Returns:
   //
+  try
+  {
+    // acquire transform to convert local frame to global frame
+    transformStamped =
+        tfBuffer.lookupTransform(global_frame, local_frame, ros::Time(0));
+    // also acquire to convert to local frame
+    localTransformStamped =
+        tfBuffer.lookupTransform(local_frame, global_frame, ros::Time(0));
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_WARN("%s", ex.what());
+  }
 
   last_pose = *pose_msg; // multiple methods require access to pose
   pose_set = true;
@@ -264,9 +268,74 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   heading_current = tf2::impl::getYaw(quat); // heading_current = yaw
   // tree as std::vector
   std::vector<Node> tree;
+  // store the final path
+  std::vector<Node> paths;
+  // setup root node
+  Node start;
+  start.x = pose_msg->pose.pose.position.x;
+  start.y = pose_msg->pose.pose.position.y;
+  start.is_root = true;
+  tree.emplace_back(start);
+
+  // get the waypoint
+  std::vector<double> goal = get_goalpoint(true);
 
   // TODO: fill in the RRT main loop
-  std::vector<double> sampled_points = sample();
+  for (unsigned int i = 0; i < max_iteration; i++)
+  {
+    std::vector<double> sampled_point = sample();
+    unsigned int nearest_point = nearest(tree, sampled_point);
+    Node new_node = steer(tree[nearest_point], sampled_point);
+    new_node.parent = nearest_point;
+    if (!check_collision(tree[nearest_point], new_node))
+    {
+      tree.emplace_back(new_node);
+      if (is_goal(new_node, goal[0], goal[1]))
+      {
+        paths = find_path(tree, new_node);
+        break;
+      }
+    }
+  }
+
+  // Perform pure pursuit
+  double x_target, y_target;
+  std::size_t path_len = paths.size();
+  if (path_len == 0)
+  {
+    // do nothing
+  }
+  else
+  {
+    for (std::size_t i = 0; i < path_len; i++)
+    {
+      double distance = euclidean_distance(paths[path_len - 1 - i].x, paths[path_len - 1 - i].y,
+                                           pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
+      if (distance >= lookahead_distance)
+      {
+        x_target = paths[path_len - 1 - i].x;
+        y_target = paths[path_len - 1 - i].y;
+        break;
+      }
+    }
+    // PP control
+    double target_distance = euclidean_distance(x_target, y_target, pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
+    double lookahead_angle = atan2(y_target - pose_msg->pose.pose.position.y, x_target - pose_msg->pose.pose.position.x);
+    double dy = target_distance * sin(lookahead_angle - heading_current);
+    double angle = 2 * dy / (std::pow(target_distance, 2));
+    steer_pure_pursuit(angle);
+  }
+}
+
+void RRT::steer_pure_pursuit(const double &angle)
+{
+  double velocity = 0.5;
+  ackermann_msgs::AckermannDriveStamped drive_msg = ackermann_msgs::AckermannDriveStamped();
+  drive_msg.header.stamp = ros::Time::now();
+  drive_msg.header.frame_id = "laser";
+  drive_msg.drive.steering_angle = angle;
+  drive_msg.drive.speed = velocity;
+  drive_pub_.publish(drive_msg);
 }
 
 std::vector<double> RRT::sample() // WORKS
@@ -392,6 +461,7 @@ Node RRT::steer(Node &nearest_node, std::vector<double> &sampled_point)
   Node new_node;
   // TODO: fill in this method
   double euclidean = euclidean_distance(nearest_node.x, nearest_node.y, sampled_point[0], sampled_point[1]);
+  // think off as slider between the nearest node and the sampled point
   new_node.x = nearest_node.x + steer_length / euclidean * (sampled_point[0] - nearest_node.x);
   new_node.y = nearest_node.y + steer_length / euclidean * (sampled_point[1] - nearest_node.y);
 
@@ -444,10 +514,10 @@ bool RRT::check_collision(Node &nearest_node, Node &new_node)
     if (check_occupied(grid_coords[0], grid_coords[1]))
     {
       collision = true;
-      std::cout << "occupied cell (" << checkpoint_x << ", " << checkpoint_y
-                << ")" << std::endl;
-      std::cout << "grid coord (" << grid_coords[0] << ", " << grid_coords[1]
-                << ")" << std::endl;
+      // std::cout << "occupied cell (" << checkpoint_x << ", " << checkpoint_y
+      //           << ")" << std::endl;
+      // std::cout << "grid coord (" << grid_coords[0] << ", " << grid_coords[1]
+      //           << ")" << std::endl;
       break;
     }
   }
