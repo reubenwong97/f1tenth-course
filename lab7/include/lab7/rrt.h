@@ -66,6 +66,7 @@ private:
     std::string local_frame = "base_link";
     std::string global_frame = "map";
     geometry_msgs::TransformStamped transformStamped;
+    geometry_msgs::TransformStamped localTransformStamped;
 
     tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener tfListener;
@@ -144,6 +145,7 @@ private:
                                        const geometry_msgs::TransformStamped &transformStamped, const nav_msgs::Odometry &pose_msg);
     double euclidean_distance(const double &x1, const double &y1, const double &x2, const double &y2);
     std::vector<std::vector<double>> get_goals(std::string path);
+    std::vector<double> get_goalpoint(bool plot = true);
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);

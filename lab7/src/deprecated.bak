@@ -1,0 +1,113 @@
+std::vector<double>
+RRT::truncateFOV(const sensor_msgs::LaserScan::ConstPtr &scan_msg,
+                 double &fov_min, double &fov_max, double &angle_increment)
+{
+  double fov_half = toRadians(fov / 2);
+  int min_fov_idx = static_cast<int>((-fov_half - scan_msg->angle_min) /
+                                     scan_msg->angle_increment);
+  int max_fov_idx = static_cast<int>((fov_half - scan_msg->angle_min) /
+                                     scan_msg->angle_increment);
+
+  // store for access outside function
+  // angles for the min and max scan
+  fov_min = scan_msg->angle_min + min_fov_idx * scan_msg->angle_increment;
+  fov_max = scan_msg->angle_min + max_fov_idx * scan_msg->angle_increment;
+  angle_increment = scan_msg->angle_increment;
+
+  return std::vector<double>(scan_msg->ranges.begin() + min_fov_idx,
+                             scan_msg->ranges.begin() + max_fov_idx);
+}
+
+/* NOTE: Origin is at the bottom right corner of the map
+ */
+std::tuple<int, int>
+RRT::toGlobalIndex(const double &distance, const double &angle,
+                   const geometry_msgs::TransformStamped &transformStamped,
+                   const nav_msgs::Odometry &pose_msg)
+{
+  // get position of car in global frame
+  double local_pos_x, local_pos_y, global_pos_x, global_pos_y, end_x, end_y;
+  int x_idx, y_idx;
+  geometry_msgs::PointStamped car_pos;
+  local_pos_x = pose_msg.pose.pose.position.x;
+  local_pos_y = pose_msg.pose.pose.position.y;
+  car_pos = getTransformedPoint(local_pos_x, local_pos_y, transformStamped);
+  global_pos_x = car_pos.point.x;
+  global_pos_y = car_pos.point.y;
+
+  std::tuple<int, int> index;
+
+  double rear_to_lidar = 0.29275;
+  double x_lidar = global_pos_x + rear_to_lidar * std::cos(heading_current);
+  double y_lidar = global_pos_y + rear_to_lidar * std::sin(heading_current);
+  double global_angle = angle + heading_current;
+
+  end_x = x_lidar + distance * std::cos(global_angle);
+  end_y = y_lidar + distance * std::sin(global_angle);
+
+  std::vector<int> grid_coords = get_grid_coords(end_x, end_y);
+
+  x_idx = grid_coords[0];
+  y_idx = grid_coords[1];
+  index = std::make_tuple(x_idx, y_idx);
+
+  return index;
+}
+
+void RRT::scan_callback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
+{
+  // The scan callback, update your occupancy grid here
+  // Args:
+  //    scan_msg (*LaserScan): pointer to the incoming scan message
+  try
+  {
+    // acquire transform to convert local frame to global frame
+    transformStamped =
+        tfBuffer.lookupTransform(global_frame, local_frame, ros::Time(0));
+    // also acquire to convert to local frame
+    localTransformStamped =
+        tfBuffer.lookupTransform(local_frame, global_frame, ros::Time(0));
+  }
+  catch (tf2::TransformException &ex)
+  {
+    ROS_WARN("%s", ex.what());
+  }
+
+  double fov_min = 0, fov_max = 0, angle_increment = 0, angle = toRadians(-90);
+  std::vector<double> truncatedRanges =
+      truncateFOV(scan_msg, fov_min, fov_max, angle_increment);
+
+  // TODO: update your occupancy grid
+  occupancy_grid = occupancy_grid_static;
+  double rear_to_lidar = 0.29275; // not sure how to use for now
+
+  if (pose_set)
+  {
+    for (double range : truncatedRanges)
+    {
+      // find hit points of each scan
+      int x, y;
+      std::tuple<int, int> endpoint;
+      std::vector<std::tuple<int, int>> coords;
+      // endpoint needs to be saved to set those locations as occupied since
+      // bresenham frees them
+      endpoint = toGlobalIndex(range, angle, transformStamped, last_pose);
+      x = std::get<0>(endpoint);
+      y = std::get<1>(endpoint);
+      angle = angle + angle_increment;
+
+      coords = bresenham(0, 0, x, y);
+      for (std::tuple<int, int> coord : coords)
+      {
+        int row, col;
+        row = std::get<0>(coord);
+        col = std::get<1>(coord);
+
+        occupancy_grid[row][col] = FREE; // set to empty
+      }
+
+      occupancy_grid[x][y] = OCCUPIED; // set to occupied
+    }
+    publishOccupancy(occupancy_grid);
+  }
+}
