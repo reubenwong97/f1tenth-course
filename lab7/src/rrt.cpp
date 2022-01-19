@@ -26,15 +26,19 @@ RRT::RRT(ros::NodeHandle &nh)
 
   // TODO: Load parameters from yaml file, you could add your own parameters to
   // the rrt_params.yaml file
-  nh_.getParam("pose_topic", pose_topic);
-  nh_.getParam("scan_topic", scan_topic);
-  nh_.getParam("drive_topic", drive_topic);
-  nh_.getParam("env_viz", env_viz);
-  nh_.getParam("dynamic_viz", dynamic_viz);
-  nh_.getParam("static_viz", static_viz);
-  nh_.getParam("tree_lines", tree_lines);
-  nh_.getParam("map_viz_topic", map_viz_topic);
-  nh_.getParam("map_topic", map_topic);
+  // nh_.getParam("pose_topic", pose_topic);
+  // nh_.getParam("scan_topic", scan_topic);
+  // nh_.getParam("drive_topic", drive_topic);
+  // nh_.getParam("env_viz", env_viz);
+  // nh_.getParam("dynamic_viz", dynamic_viz);
+  // nh_.getParam("static_viz", static_viz);
+  // nh_.getParam("tree_lines", tree_lines);
+  // nh_.getParam("map_viz_topic", map_viz_topic);
+  // nh_.getParam("map_topic", map_topic);
+
+  pose_topic = "/odom";
+  scan_topic = "/scan";
+  map_topic = "/map";
 
   nh_.getParam("fov", fov);
   nh_.getParam("min_goal_distance", min_goal_distance);
@@ -48,15 +52,12 @@ RRT::RRT(ros::NodeHandle &nh)
   // ROS publishers
   // TODO: create publishers for the the drive topic, and other topics you might
   // need
-  drive_pub_ =
-      nh_.advertise<ackermann_msgs::AckermannDriveStamped>(drive_topic, 1000);
-  // mapvis_pub_ = nh_.advertise<visualization_msgs::Marker>(env_viz, 1000);
-  // points_pub_ = nh_.advertise<visualization_msgs::Marker>(dynamic_viz, 1000);
-  // waypoint_pub_ = nh_.advertise<visualization_msgs::Marker>(static_viz,
-  // 1000); lines_pub_ = nh_.advertise<visualization_msgs::Marker>(tree_lines,
-  // 1000);
-  map_viz_pub_ = nh_.advertise<nav_msgs::OccupancyGrid>(map_viz_topic, 1000);
-  point_pub_ = nh_.advertise<visualization_msgs::Marker>("/test_point", 1000);
+
+  drive_pub_ = nh_.advertise<ackermann_msgs::AckermannDriveStamped>("/nav", 1000);
+  mapvisual_pub_ = nh_.advertise<visualization_msgs::Marker>("/env_viz", 1000);
+  points_pub_ = nh_.advertise<visualization_msgs::Marker>("/dynamic_viz", 1000);
+  waypoint_pub_ = nh_.advertise<visualization_msgs::Marker>("/static_viz", 1000);
+  edges_pub_ = nh_.advertise<visualization_msgs::Marker>("/tree_lines", 1000);
 
   // ROS subscribers
   // TODO: create subscribers as you need
@@ -80,7 +81,7 @@ RRT::RRT(ros::NodeHandle &nh)
   // char tmp[256];
   // getcwd(tmp, 256);
   // std::cout << tmp << std::endl;
-  goals = get_goals("/home/reuben/reuben_ws/src/lab7/waypoints_cleaned.csv");
+  goals = get_goals("/home/reuben/reuben_ws/src/lab7/downsample_10.csv");
   // std::cout << goals[0][0] << " " << goals[0][1] << std::endl;
 
   occupancy_grid_static = unflatten(map_message.data, height, width);
@@ -106,8 +107,8 @@ std::vector<std::vector<double>> RRT::get_goals(std::string path)
       std::stringstream ss(line); // create stringstream for current line
       std::string str_point;
       while (getline(ss, str_point, ',')) // break each line by comma
-        goal.emplace_back(std::stold(str_point));
-      goals.emplace_back(goal);
+        goal.push_back(std::stold(str_point));
+      goals.push_back(goal);
     }
   }
 
@@ -127,30 +128,33 @@ std::vector<double> RRT::get_goalpoint(bool plot)
     geometry_msgs::PointStamped point = getTransformedPoint(x, y, localTransformStamped); // transform to local frame
     tran_x = point.point.x;
     tran_y = point.point.y;
-    trans_x.emplace_back(tran_x);
-    trans_y.emplace_back(tran_y);
+    trans_x.push_back(tran_x);
+    trans_y.push_back(tran_y);
     distance = std::sqrt(std::pow(tran_x, 2) + std::pow(tran_y, 2));
-    dist.emplace_back(distance);
+    dist.push_back(distance);
+  }
 
-    bool found = false;
-    while (!found)
+  bool found = false;
+  unsigned int counter = 0;
+  unsigned int max_searches = goals.size();
+  while (!found && counter < max_searches)
+  {
+    std::vector<double>::iterator res = std::min_element(dist.begin(), dist.end());
+    int index = std::distance(dist.begin(), res);
+    if (trans_x[index] > 0)
     {
-      std::vector<double>::iterator res = std::min_element(dist.begin(), dist.end());
-      int index = std::distance(dist.begin(), res);
-      if (trans_x[index] > 0)
-      {
-        found = true;
-        double point_x, point_y;
-        point_x = trans_x[index];
-        point_y = trans_y[index];
-        goal_point.emplace_back(point_x);
-        goal_point.emplace_back(point_y);
-      }
-      else
-      {
-        dist[index] = 999999; // set to high value so we skip past it next time we find the min
-      }
+      found = true;
+      double point_x, point_y;
+      point_x = goals[index][0];
+      point_y = goals[index][1];
+      goal_point.push_back(point_x);
+      goal_point.push_back(point_y);
     }
+    else
+    {
+      dist[index] = 999999; // set to high value so we skip past it next time we find the min
+    }
+    counter++;
   }
 
   // if (plot)
@@ -235,7 +239,7 @@ void RRT::publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid)
   grid_msg.data = std::vector<int8_t>(
       flattened.begin(), flattened.end()); // cast to match message data type
 
-  map_viz_pub_.publish(grid_msg);
+  // map_viz_pub_.publish(grid_msg);
 }
 
 // void RRT::pf_callback(const geometry_msgs::PoseStamped::ConstPtr &pose_msg)
@@ -247,7 +251,7 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   //    pose_msg (*PoseStamped): pointer to the incoming pose message
   // Returns:
   //
-  std::cout << "Inside pf callback" << std::endl;
+  // std::cout << "Inside pf callback" << std::endl;
   try
   {
     // acquire transform to convert local frame to global frame
@@ -276,24 +280,40 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   start.x = pose_msg->pose.pose.position.x;
   start.y = pose_msg->pose.pose.position.y;
   start.is_root = true;
-  tree.emplace_back(start);
+  tree.push_back(start);
+
+  // std::cout << "Before clearing points" << std::endl;
+  marker.points.clear();
+  // std::cout << "After clearing points" << std::endl;
+  // points to be plot through marker
+  geometry_msgs::Point points;
 
   // get the waypoint
   std::vector<double> goal = get_goalpoint();
-  std::cout << "Goalpoint is: " << goal[0] << ", " << goal[1] << std::endl;
+  x_goal = goal[0];
+  y_goal = goal[1];
+  // std::cout << "Goalpoint is: " << goal[0] << ", " << goal[1] << std::endl;
 
   // TODO: fill in the RRT main loop
   for (unsigned int i = 0; i < max_iteration; i++)
   {
-    std::cout << "Calling sample" << std::endl;
+    // std::cout << "Calling sample" << std::endl;
     std::vector<double> sampled_point = sample();
     unsigned int nearest_point = nearest(tree, sampled_point);
     Node new_node = steer(tree[nearest_point], sampled_point);
     new_node.parent = nearest_point;
     if (!check_collision(tree[nearest_point], new_node))
     {
-      tree.emplace_back(new_node);
-      if (is_goal(new_node, goal[0], goal[1]))
+      std::cout << "Goalpoint is: " << x_goal << ", " << y_goal << std::endl;
+      // std::cout << "Car is at: " << start.x << ", " << start.y << std::endl;
+      tree.push_back(new_node);
+      points.x = new_node.x;
+      points.y = new_node.y;
+      points.z = 0.0;
+      marker.points.push_back(points);
+      // std::cout << "Tree now has size: " << tree.size() << std::endl;
+      // if (is_goal(new_node, goal[0], goal[1]))
+      if (is_goal(new_node, x_goal, y_goal))
       {
         paths = find_path(tree, new_node);
         break;
@@ -304,32 +324,120 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   // Perform pure pursuit
   double x_target, y_target;
   std::size_t path_len = paths.size();
-  std::cout << "Path size: " << path_len << std::endl;
-  if (path_len == 0)
+  // std::cout << "Path size: " << path_len << std::endl;
+
+  for (std::size_t i = 0; i < path_len; i++)
   {
-    // do nothing
-  }
-  else
-  {
-    for (std::size_t i = 0; i < path_len; i++)
+    // std::cout << "Iter..." << i << std::endl;
+    double distance = euclidean_distance(paths[path_len - 1 - i].x, paths[path_len - 1 - i].y,
+                                         pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
+    if (distance >= lookahead_distance)
     {
-      std::cout << "Iter..." << i << std::endl;
-      double distance = euclidean_distance(paths[path_len - 1 - i].x, paths[path_len - 1 - i].y,
-                                           pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
-      if (distance >= lookahead_distance)
-      {
-        x_target = paths[path_len - 1 - i].x;
-        y_target = paths[path_len - 1 - i].y;
-        break;
-      }
+      // std::cout << "Updating target " << i << std::endl;
+      x_target = paths[path_len - 1 - i].x;
+      y_target = paths[path_len - 1 - i].y;
+      break;
     }
-    // PP control
-    double target_distance = euclidean_distance(x_target, y_target, pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
-    double lookahead_angle = std::atan2(y_target - pose_msg->pose.pose.position.y, x_target - pose_msg->pose.pose.position.x);
-    double dy = target_distance * std::sin(lookahead_angle - heading_current);
-    double angle = 2 * dy / (std::pow(target_distance, 2));
-    steer_pure_pursuit(angle);
   }
+  // PP control
+  double target_distance = euclidean_distance(x_target, y_target, pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
+  double lookahead_angle = std::atan2(y_target - pose_msg->pose.pose.position.y, x_target - pose_msg->pose.pose.position.x);
+  double dy = target_distance * std::sin(lookahead_angle - heading_current);
+  double angle = 2 * dy / (std::pow(target_distance, 2));
+  steer_pure_pursuit(angle);
+
+  // blue for sampled points
+  marker.header.frame_id = "map";
+  marker.header.stamp = ros::Time();
+  marker.type = visualization_msgs::Marker::POINTS;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.scale.x = 0.2;
+  marker.scale.y = 0.2;
+  marker.color.a = 1.0;
+  marker.color.r = 0.0;
+  marker.color.g = 0.0;
+  marker.color.b = 1.0;
+  mapvisual_pub_.publish(marker);
+
+  // red for the global goal point
+  marker_2.points.clear();
+  points.x = x_goal;
+  points.y = y_goal;
+  marker_2.points.push_back(points);
+  marker_2.header.frame_id = "map";
+  marker_2.header.stamp = ros::Time();
+  marker_2.type = visualization_msgs::Marker::POINTS;
+  marker_2.action = visualization_msgs::Marker::ADD;
+  marker_2.scale.x = 0.3;
+  marker_2.scale.y = 0.3;
+  marker_2.color.a = 1.0;
+  marker_2.color.r = 1.0;
+  marker_2.color.g = 0.0;
+  marker_2.color.b = 0.0;
+  points_pub_.publish(marker_2);
+
+  // green for the target waypoint
+  marker_3.points.clear();
+  points.x = x_target;
+  points.y = y_target;
+  marker_3.points.push_back(points);
+  marker_3.header.frame_id = "map";
+  marker_3.header.stamp = ros::Time();
+  marker_3.type = visualization_msgs::Marker::POINTS;
+  marker_3.action = visualization_msgs::Marker::ADD;
+  marker_3.scale.x = 0.3;
+  marker_3.scale.y = 0.3;
+  marker_3.color.a = 1.0;
+  marker_3.color.r = 0.0;
+  marker_3.color.g = 1.0;
+  marker_3.color.b = 0.0;
+  waypoint_pub_.publish(marker_3);
+
+  // green connecting lines
+  marker_4.header.frame_id = "map";
+  marker_4.header.stamp = ros::Time();
+  marker_4.type = visualization_msgs::Marker::LINE_STRIP;
+  marker_4.action = visualization_msgs::Marker::ADD;
+  marker_4.scale.x = 0.05;
+  marker_4.scale.y = 0.1;
+  marker_4.color.a = 1.0;
+  marker_4.color.r = 0.0;
+  marker_4.color.g = 1.0;
+  marker_4.color.b = 0.0;
+  edges_pub_.publish(marker_4);
+  // if (path_len == 0)
+  // {
+  //   // do nothing
+  // }
+  // else
+  // {
+  //   for (std::size_t i = 0; i < path_len; i++)
+  //   {
+  //     std::cout << "Iter..." << i << std::endl;
+  //     double distance = euclidean_distance(paths[path_len - 1 - i].x, paths[path_len - 1 - i].y,
+  //                                          pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
+  //     if (distance >= lookahead_distance)
+  //     {
+  //       x_target = paths[path_len - 1 - i].x;
+  //       y_target = paths[path_len - 1 - i].y;
+  //       break;
+  //     }
+  //   }
+  //   // PP control
+  //   double target_distance = euclidean_distance(x_target, y_target, pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
+  //   double lookahead_angle = std::atan2(y_target - pose_msg->pose.pose.position.y, x_target - pose_msg->pose.pose.position.x);
+  //   double dy = target_distance * std::sin(lookahead_angle - heading_current);
+  //   double angle = 2 * dy / (std::pow(target_distance, 2));
+  //   steer_pure_pursuit(angle);
+  // }
+  // if (path_len != 0)
+  // {
+  // double target_distance = euclidean_distance(x_target, y_target, pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
+  // double lookahead_angle = std::atan2(y_target - pose_msg->pose.pose.position.y, x_target - pose_msg->pose.pose.position.x);
+  // double dy = target_distance * std::sin(lookahead_angle - heading_current);
+  // double angle = 2 * dy / (std::pow(target_distance, 2));
+  // steer_pure_pursuit(angle);
+  // }
 }
 
 void RRT::steer_pure_pursuit(const double &angle)
@@ -340,6 +448,7 @@ void RRT::steer_pure_pursuit(const double &angle)
   drive_msg.header.frame_id = "laser";
   drive_msg.drive.steering_angle = angle;
   drive_msg.drive.speed = velocity;
+  // std::cout << "Publishing drive message with angle: " << angle << std::endl;
   drive_pub_.publish(drive_msg);
 }
 
@@ -370,8 +479,8 @@ std::vector<double> RRT::sample() // WORKS
   gx = sampledPoint.point.x;
   gy = sampledPoint.point.y;
 
-  std::cout << "Sampling..." << gx << ", " << gy << std::endl;
-  publishPoint(gx, gy, 255, 0, 0); // publish red point for visualisation
+  // std::cout << "Sampling..." << gx << ", " << gy << std::endl;
+  // publishPoint(gx, gy, 255, 0, 0); // publish red point for visualisation
 
   sampled_point.push_back(gx);
   sampled_point.push_back(gy);
@@ -413,7 +522,7 @@ void RRT::publishPoint(const double &x, const double &y, const int &r, const int
 
   marker.lifetime.sec = 0;
   marker.frame_locked = true;
-  point_pub_.publish(marker);
+  // point_pub_.publish(marker);
 }
 
 double RRT::euclidean_distance(const double &x1, const double &y1, const double &x2, const double &y2)
@@ -437,8 +546,9 @@ int RRT::nearest(std::vector<Node> &tree, std::vector<double> &sampled_point)
   sy = sampled_point[1];
 
   double min_distance = euclidean_distance(tree[0].x, tree[0].y, sx, sy);
-  for (std::size_t i; i < tree.size(); i++)
+  for (std::size_t i = 0; i < tree.size(); i++)
   {
+    // std::cout << "Finding nearest point iter: " << i << std::endl;
     if (euclidean_distance(tree[i].x, tree[i].y, sx, sy) < min_distance)
     {
       min_distance = euclidean_distance(tree[i].x, tree[i].y, sx, sy);
@@ -549,7 +659,10 @@ bool RRT::is_goal(Node &latest_added_node, double goal_x, double goal_y)
                                  std::pow(latest_added_node.y - goal_y, 2),
                              0.5);
   if (distance < min_goal_distance)
+  {
+    // std::cout << "Good enough to goal" << std::endl;
     close_enough = true;
+  }
 
   return close_enough;
 }
@@ -566,17 +679,39 @@ std::vector<Node> RRT::find_path(std::vector<Node> &tree,
   //   path (std::vector<Node>): the vector that represents the order of
   //      of the nodes traversed as the found path
 
+  geometry_msgs::Point points;
+  marker_4.points.clear();
+  points.x = x_goal;
+  points.y = y_goal;
+  points.z = 0.0;
+  marker_4.points.push_back(points);
+  points.x = latest_added_node.x;
+  points.y = latest_added_node.y;
+  points.z = 0.0;
+  marker_4.points.push_back(points);
+
+  int i = 0;
   std::vector<Node> found_path;
   // TODO: fill in this method
   found_path.push_back(latest_added_node);
   Node next_node = tree[latest_added_node.parent];
   while (!next_node.is_root)
   {
+    // std::cout << "Finding path counter: " << i << std::endl;
+    i++;
     found_path.push_back(next_node);
     next_node = tree[next_node.parent];
+    points.x = next_node.x;
+    points.y = next_node.y;
+    points.z = 0.0;
+    marker_4.points.push_back(points);
   }
 
   found_path.push_back(tree[0]); // always ends at root
+  points.x = tree[0].x;
+  points.y = tree[0].y;
+  points.z = 0.0;
+  marker_4.points.push_back(points);
 
   return found_path;
 }

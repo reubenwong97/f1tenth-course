@@ -73,16 +73,23 @@ private:
 
     // ros pub/sub
     // TODO: add the publishers and subscribers you need
+    double x_goal, y_goal;
+    // double x_current, y_current, x_limit_top, x_limit_bot, y_limit_left, y_limit_right;
 
     ros::Subscriber pf_sub_;
     ros::Subscriber scan_sub_;
+
     ros::Publisher drive_pub_;
-    ros::Publisher mapvis_pub_;
+    ros::Publisher mapvisual_pub_;
     ros::Publisher points_pub_;
     ros::Publisher waypoint_pub_;
-    ros::Publisher lines_pub_;
-    ros::Publisher map_viz_pub_;
-    ros::Publisher point_pub_; //  for testing
+    ros::Publisher edges_pub_;
+
+    // set markers for debugging
+    visualization_msgs::Marker marker;
+    visualization_msgs::Marker marker_2;
+    visualization_msgs::Marker marker_3;
+    visualization_msgs::Marker marker_4;
 
     // topics
     std::string pose_topic, scan_topic, drive_topic, env_viz, dynamic_viz, static_viz, tree_lines, map_viz_topic, map_topic;
