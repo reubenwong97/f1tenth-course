@@ -46,6 +46,7 @@ RRT::RRT(ros::NodeHandle &nh)
   nh_.getParam("steer_length", steer_length);
   nh_.getParam("lookahead_distance", lookahead_distance);
   nh_.getParam("max_iteration", max_iteration);
+  nh_.getParam("goal_distance", goal_distance);
 
   // flags
   nh_.getParam("publish_grid", publish_grid);
@@ -82,7 +83,7 @@ RRT::RRT(ros::NodeHandle &nh)
   // char tmp[256];
   // getcwd(tmp, 256);
   // std::cout << tmp << std::endl;
-  goals = get_goals("/home/reuben/reuben_ws/src/lab7/downsample_10.csv");
+  goals = get_goals("/home/reuben/reuben_ws/src/lab7/downsample_5.csv");
   // std::cout << goals[0][0] << " " << goals[0][1] << std::endl;
 
   occupancy_grid_static = unflatten(map_message.data, height, width);
@@ -121,6 +122,7 @@ std::vector<double> RRT::get_goalpoint(bool plot)
 {
   std::vector<double> trans_x, trans_y, dist, goal_point;
   std::size_t num_goals = goals.size();
+  // transform all waypoints to local frame
   for (std::size_t i = 0; i < num_goals; i++)
   {
     double x, y, tran_x, tran_y, distance;
@@ -142,7 +144,7 @@ std::vector<double> RRT::get_goalpoint(bool plot)
   {
     std::vector<double>::iterator res = std::min_element(dist.begin(), dist.end());
     int index = std::distance(dist.begin(), res);
-    if (trans_x[index] > 0)
+    if (trans_x[index] > goal_distance)
     {
       found = true;
       double point_x, point_y;
@@ -258,10 +260,10 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   y_current = pose_msg->pose.pose.position.y;
 
   // set the global goal point depending on the car's location
-  if (x_current <= 8.00 && y_current <= 2.34)
+  if (x_current <= 8.00 && y_current <= 1.5)
   { // on the right side of the loop
     x_goal = x_current + 2.30;
-    y_goal = -0.145;
+    y_goal = -0.75;
     x_limit_top = x_current + 2.50;
     x_limit_bot = x_current;
     y_limit_left = 0.37;
@@ -270,13 +272,13 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   else if (x_current > 8.00 && y_current <= 6.15)
   { // on the top side of the loop
     x_goal = 9.775;
-    y_goal = y_current + 1.30;
+    y_goal = y_current + 1.20;
     x_limit_top = 10.03;
-    x_limit_bot = 9.12;
+    x_limit_bot = 8.12;
     y_limit_left = y_current + 2.50;
     y_limit_right = y_current;
   }
-  else if (x_current >= -11.26 && y_current > 6.15)
+  else if (x_current >= -12 && y_current > 6.15)
   { // on the left side of the loop
     x_goal = x_current - 2.30;
     y_goal = 8.65;
@@ -285,7 +287,7 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     y_limit_left = 9.15;
     y_limit_right = 8.15;
   }
-  else if (x_current < -11.26 && y_current > 2.34)
+  else if (x_current < -12 && y_current > 1.5)
   { // on the bottom side of the loop
     x_goal = -13.79;
     y_goal = y_current - 2.30;
@@ -485,7 +487,7 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
 
 void RRT::steer_pure_pursuit(const double &angle)
 {
-  double velocity = 0.5;
+  double velocity = 1.0;
   ackermann_msgs::AckermannDriveStamped drive_msg = ackermann_msgs::AckermannDriveStamped();
   drive_msg.header.stamp = ros::Time::now();
   drive_msg.header.frame_id = "laser";
@@ -505,12 +507,11 @@ std::vector<double> RRT::sample() // WORKS
   //     sampled_point (std::vector<double>): the sampled point in free space
 
   // sample points locally in front of the car
-  double x_bound_top, x_bound_bot, y_bound_left, y_bound_right;
   double sx, sy, gx, gy;
-  // x_bound_top = 2.5;
-  // x_bound_bot = 0;
-  // y_bound_left = 0.8;
-  // y_bound_right = -0.75;
+  // x_limit_top = 2.5;
+  // x_limit_bot = 0;
+  // y_limit_left = 0.8;
+  // y_limit_right = -0.75;
   std::vector<double> sampled_point;
   std::uniform_real_distribution<> dis_x(x_limit_bot, x_limit_top);
   std::uniform_real_distribution<> dis_y(y_limit_left, y_limit_right);

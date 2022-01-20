@@ -18,6 +18,7 @@ steer_length: 0.30
 lookahead_distance: 0.6
 max_iteration: 100 
 gain: 2.0
+goal_distance: 0.1
 
 
 # flags for debugging

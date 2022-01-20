@@ -76,6 +76,7 @@ private:
     double x_goal, y_goal;
     double x_current, y_current, x_limit_top, x_limit_bot, y_limit_left, y_limit_right;
     double gain;
+    double goal_distance;
 
     ros::Subscriber pf_sub_;
     ros::Subscriber scan_sub_;
@@ -155,6 +156,7 @@ private:
     std::vector<std::vector<double>> get_goals(std::string path);
     std::vector<double> get_goalpoint(bool plot = true);
     void steer_pure_pursuit(const double &angle);
+    std::vector<int8_t> pad_grid(std::vector<int8_t> grid, unsigned int width);
 
     // to consider writing as func
     void publishOccupancy(const std::vector<std::vector<int>> &occupancyGrid);
