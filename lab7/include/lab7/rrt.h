@@ -74,7 +74,8 @@ private:
     // ros pub/sub
     // TODO: add the publishers and subscribers you need
     double x_goal, y_goal;
-    // double x_current, y_current, x_limit_top, x_limit_bot, y_limit_left, y_limit_right;
+    double x_current, y_current, x_limit_top, x_limit_bot, y_limit_left, y_limit_right;
+    double gain;
 
     ros::Subscriber pf_sub_;
     ros::Subscriber scan_sub_;

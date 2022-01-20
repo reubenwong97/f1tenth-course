@@ -35,6 +35,7 @@ RRT::RRT(ros::NodeHandle &nh)
   // nh_.getParam("tree_lines", tree_lines);
   // nh_.getParam("map_viz_topic", map_viz_topic);
   // nh_.getParam("map_topic", map_topic);
+  nh_.getParam("gain", gain);
 
   pose_topic = "/odom";
   scan_topic = "/scan";
@@ -252,6 +253,48 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   // Returns:
   //
   // std::cout << "Inside pf callback" << std::endl;
+
+  x_current = pose_msg->pose.pose.position.x;
+  y_current = pose_msg->pose.pose.position.y;
+
+  // set the global goal point depending on the car's location
+  if (x_current <= 8.00 && y_current <= 2.34)
+  { // on the right side of the loop
+    x_goal = x_current + 2.30;
+    y_goal = -0.145;
+    x_limit_top = x_current + 2.50;
+    x_limit_bot = x_current;
+    y_limit_left = 0.37;
+    y_limit_right = -0.66;
+  }
+  else if (x_current > 8.00 && y_current <= 6.15)
+  { // on the top side of the loop
+    x_goal = 9.775;
+    y_goal = y_current + 1.30;
+    x_limit_top = 10.03;
+    x_limit_bot = 9.12;
+    y_limit_left = y_current + 2.50;
+    y_limit_right = y_current;
+  }
+  else if (x_current >= -11.26 && y_current > 6.15)
+  { // on the left side of the loop
+    x_goal = x_current - 2.30;
+    y_goal = 8.65;
+    x_limit_top = x_current;
+    x_limit_bot = x_current - 2.50;
+    y_limit_left = 9.15;
+    y_limit_right = 8.15;
+  }
+  else if (x_current < -11.26 && y_current > 2.34)
+  { // on the bottom side of the loop
+    x_goal = -13.79;
+    y_goal = y_current - 2.30;
+    x_limit_top = -13.32;
+    x_limit_bot = -14.26;
+    y_limit_left = y_current;
+    y_limit_right = y_current - 2.50;
+  }
+
   try
   {
     // acquire transform to convert local frame to global frame
@@ -289,9 +332,9 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   geometry_msgs::Point points;
 
   // get the waypoint
-  std::vector<double> goal = get_goalpoint();
-  x_goal = goal[0];
-  y_goal = goal[1];
+  // std::vector<double> goal = get_goalpoint();
+  // x_goal = goal[0];
+  // y_goal = goal[1];
   // std::cout << "Goalpoint is: " << goal[0] << ", " << goal[1] << std::endl;
 
   // TODO: fill in the RRT main loop
@@ -304,7 +347,7 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
     new_node.parent = nearest_point;
     if (!check_collision(tree[nearest_point], new_node))
     {
-      std::cout << "Goalpoint is: " << x_goal << ", " << y_goal << std::endl;
+      // std::cout << "Goalpoint is: " << x_goal << ", " << y_goal << std::endl;
       // std::cout << "Car is at: " << start.x << ", " << start.y << std::endl;
       tree.push_back(new_node);
       points.x = new_node.x;
@@ -343,7 +386,7 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   double target_distance = euclidean_distance(x_target, y_target, pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
   double lookahead_angle = std::atan2(y_target - pose_msg->pose.pose.position.y, x_target - pose_msg->pose.pose.position.x);
   double dy = target_distance * std::sin(lookahead_angle - heading_current);
-  double angle = 2 * dy / (std::pow(target_distance, 2));
+  double angle = gain * dy / (std::pow(target_distance, 2));
   steer_pure_pursuit(angle);
 
   // blue for sampled points
@@ -464,26 +507,29 @@ std::vector<double> RRT::sample() // WORKS
   // sample points locally in front of the car
   double x_bound_top, x_bound_bot, y_bound_left, y_bound_right;
   double sx, sy, gx, gy;
-  x_bound_top = 2.5;
-  x_bound_bot = 0;
-  y_bound_left = 0.8;
-  y_bound_right = -0.75;
+  // x_bound_top = 2.5;
+  // x_bound_bot = 0;
+  // y_bound_left = 0.8;
+  // y_bound_right = -0.75;
   std::vector<double> sampled_point;
-  std::uniform_real_distribution<> dis_x(x_bound_bot, x_bound_top);
-  std::uniform_real_distribution<> dis_y(y_bound_left, y_bound_right);
+  std::uniform_real_distribution<> dis_x(x_limit_bot, x_limit_top);
+  std::uniform_real_distribution<> dis_y(y_limit_left, y_limit_right);
 
   sx = dis_x(gen); // sample locally
   sy = dis_y(gen);
 
-  geometry_msgs::PointStamped sampledPoint = getTransformedPoint(sx, sy, transformStamped);
-  gx = sampledPoint.point.x;
-  gy = sampledPoint.point.y;
+  // geometry_msgs::PointStamped sampledPoint = getTransformedPoint(sx, sy, transformStamped);
+  // gx = sampledPoint.point.x;
+  // gy = sampledPoint.point.y;
 
   // std::cout << "Sampling..." << gx << ", " << gy << std::endl;
   // publishPoint(gx, gy, 255, 0, 0); // publish red point for visualisation
 
-  sampled_point.push_back(gx);
-  sampled_point.push_back(gy);
+  sampled_point.push_back(sx);
+  sampled_point.push_back(sy);
+
+  // sampled_point.push_back(gx);
+  // sampled_point.push_back(gy);
 
   return sampled_point;
 }
