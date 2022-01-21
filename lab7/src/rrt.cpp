@@ -272,7 +272,7 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
   else if (x_current > 8.00 && y_current <= 6.15)
   { // on the top side of the loop
     x_goal = 9.775;
-    y_goal = y_current + 1.20;
+    y_goal = y_current + 2.30;
     x_limit_top = 10.03;
     x_limit_bot = 8.12;
     y_limit_left = y_current + 2.50;
