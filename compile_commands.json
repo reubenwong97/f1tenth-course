@@ -20,24 +20,39 @@
   "file": "/usr/src/googletest/googletest/src/gtest-all.cc"
 },
 {
+  "directory": "/home/reuben/reuben_ws/build/lab7",
+  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"lab7\\\" -I/home/reuben/reuben_ws/src/lab7/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp    -o CMakeFiles/rrt.dir/node/rrt_node.cpp.o -c /home/reuben/reuben_ws/src/lab7/node/rrt_node.cpp",
+  "file": "/home/reuben/reuben_ws/src/lab7/node/rrt_node.cpp"
+},
+{
+  "directory": "/home/reuben/reuben_ws/build/lab7",
+  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"lab7\\\" -I/home/reuben/reuben_ws/src/lab7/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp    -o CMakeFiles/rrt.dir/src/rrt.cpp.o -c /home/reuben/reuben_ws/src/lab7/src/rrt.cpp",
+  "file": "/home/reuben/reuben_ws/src/lab7/src/rrt.cpp"
+},
+{
+  "directory": "/home/reuben/reuben_ws/build/lab7",
+  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"lab7\\\" -I/home/reuben/reuben_ws/src/lab7/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp    -o CMakeFiles/rrt.dir/src/geom_helpers.cpp.o -c /home/reuben/reuben_ws/src/lab7/src/geom_helpers.cpp",
+  "file": "/home/reuben/reuben_ws/src/lab7/src/geom_helpers.cpp"
+},
+{
+  "directory": "/home/reuben/reuben_ws/build/team3_lab7",
+  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"rrt\\\" -I/home/reuben/reuben_ws/src/team3_lab7/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp  -O3   -std=c++11 -o CMakeFiles/rrt_node.dir/node/rrt_node.cpp.o -c /home/reuben/reuben_ws/src/team3_lab7/node/rrt_node.cpp",
+  "file": "/home/reuben/reuben_ws/src/team3_lab7/node/rrt_node.cpp"
+},
+{
+  "directory": "/home/reuben/reuben_ws/build/team3_lab7",
+  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"rrt\\\" -I/home/reuben/reuben_ws/src/team3_lab7/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp  -O3   -std=c++11 -o CMakeFiles/rrt_node.dir/src/rrt.cpp.o -c /home/reuben/reuben_ws/src/team3_lab7/src/rrt.cpp",
+  "file": "/home/reuben/reuben_ws/src/team3_lab7/src/rrt.cpp"
+},
+{
   "directory": "/home/reuben/reuben_ws/build/f1tenth_simulator",
-  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"f1tenth_simulator\\\" -I/home/reuben/reuben_ws/src/f1tenth_simulator/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -I/usr/include/eigen3  -Wall -Wextra -O3   -std=gnu++11 -o CMakeFiles/simulator.dir/node/simulator.cpp.o -c /home/reuben/reuben_ws/src/f1tenth_simulator/node/simulator.cpp",
-  "file": "/home/reuben/reuben_ws/src/f1tenth_simulator/node/simulator.cpp"
+  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"f1tenth_simulator\\\" -I/home/reuben/reuben_ws/src/f1tenth_simulator/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -I/usr/include/eigen3  -Wall -Wextra -O3   -std=gnu++11 -o CMakeFiles/random_walk.dir/node/random_walk.cpp.o -c /home/reuben/reuben_ws/src/f1tenth_simulator/node/random_walk.cpp",
+  "file": "/home/reuben/reuben_ws/src/f1tenth_simulator/node/random_walk.cpp"
 },
 {
   "directory": "/home/reuben/reuben_ws/build/f1tenth_simulator",
   "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"f1tenth_simulator\\\" -I/home/reuben/reuben_ws/src/f1tenth_simulator/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -I/usr/include/eigen3  -Wall -Wextra -O3   -std=gnu++11 -o CMakeFiles/mux.dir/node/mux.cpp.o -c /home/reuben/reuben_ws/src/f1tenth_simulator/node/mux.cpp",
   "file": "/home/reuben/reuben_ws/src/f1tenth_simulator/node/mux.cpp"
-},
-{
-  "directory": "/home/reuben/reuben_ws/build/f1tenth_simulator",
-  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"f1tenth_simulator\\\" -I/home/reuben/reuben_ws/src/f1tenth_simulator/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -I/usr/include/eigen3  -Wall -Wextra -O3   -std=gnu++11 -o CMakeFiles/behavior_controller.dir/node/behavior_controller.cpp.o -c /home/reuben/reuben_ws/src/f1tenth_simulator/node/behavior_controller.cpp",
-  "file": "/home/reuben/reuben_ws/src/f1tenth_simulator/node/behavior_controller.cpp"
-},
-{
-  "directory": "/home/reuben/reuben_ws/build/f1tenth_simulator",
-  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"f1tenth_simulator\\\" -I/home/reuben/reuben_ws/src/f1tenth_simulator/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -I/usr/include/eigen3  -Wall -Wextra -O3   -std=gnu++11 -o CMakeFiles/keyboard.dir/node/keyboard.cpp.o -c /home/reuben/reuben_ws/src/f1tenth_simulator/node/keyboard.cpp",
-  "file": "/home/reuben/reuben_ws/src/f1tenth_simulator/node/keyboard.cpp"
 },
 {
   "directory": "/home/reuben/reuben_ws/build/f1tenth_simulator",
@@ -66,8 +81,18 @@
 },
 {
   "directory": "/home/reuben/reuben_ws/build/f1tenth_simulator",
-  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"f1tenth_simulator\\\" -I/home/reuben/reuben_ws/src/f1tenth_simulator/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -I/usr/include/eigen3  -Wall -Wextra -O3   -std=gnu++11 -o CMakeFiles/random_walk.dir/node/random_walk.cpp.o -c /home/reuben/reuben_ws/src/f1tenth_simulator/node/random_walk.cpp",
-  "file": "/home/reuben/reuben_ws/src/f1tenth_simulator/node/random_walk.cpp"
+  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"f1tenth_simulator\\\" -I/home/reuben/reuben_ws/src/f1tenth_simulator/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -I/usr/include/eigen3  -Wall -Wextra -O3   -std=gnu++11 -o CMakeFiles/simulator.dir/node/simulator.cpp.o -c /home/reuben/reuben_ws/src/f1tenth_simulator/node/simulator.cpp",
+  "file": "/home/reuben/reuben_ws/src/f1tenth_simulator/node/simulator.cpp"
+},
+{
+  "directory": "/home/reuben/reuben_ws/build/f1tenth_simulator",
+  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"f1tenth_simulator\\\" -I/home/reuben/reuben_ws/src/f1tenth_simulator/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -I/usr/include/eigen3  -Wall -Wextra -O3   -std=gnu++11 -o CMakeFiles/keyboard.dir/node/keyboard.cpp.o -c /home/reuben/reuben_ws/src/f1tenth_simulator/node/keyboard.cpp",
+  "file": "/home/reuben/reuben_ws/src/f1tenth_simulator/node/keyboard.cpp"
+},
+{
+  "directory": "/home/reuben/reuben_ws/build/f1tenth_simulator",
+  "command": "/usr/bin/c++  -DROSCONSOLE_BACKEND_LOG4CXX -DROS_BUILD_SHARED_LIBS=1 -DROS_PACKAGE_NAME=\\\"f1tenth_simulator\\\" -I/home/reuben/reuben_ws/src/f1tenth_simulator/include -I/opt/ros/noetic/include -I/opt/ros/noetic/share/xmlrpcpp/cmake/../../../include/xmlrpcpp -I/usr/include/eigen3  -Wall -Wextra -O3   -std=gnu++11 -o CMakeFiles/behavior_controller.dir/node/behavior_controller.cpp.o -c /home/reuben/reuben_ws/src/f1tenth_simulator/node/behavior_controller.cpp",
+  "file": "/home/reuben/reuben_ws/src/f1tenth_simulator/node/behavior_controller.cpp"
 },
 {
   "directory": "/home/reuben/reuben_ws/build/wong1109_lab4_cpp",
