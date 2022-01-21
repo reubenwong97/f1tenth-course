@@ -487,12 +487,17 @@ void RRT::pf_callback(const nav_msgs::Odometry::ConstPtr &pose_msg)
 
 void RRT::steer_pure_pursuit(const double &angle)
 {
-  double velocity = 1.0;
   ackermann_msgs::AckermannDriveStamped drive_msg = ackermann_msgs::AckermannDriveStamped();
   drive_msg.header.stamp = ros::Time::now();
   drive_msg.header.frame_id = "laser";
   drive_msg.drive.steering_angle = angle;
-  drive_msg.drive.speed = velocity;
+  if (std::abs(angle) > 20.0 / 180.0 * PI) {
+      drive_msg.drive.speed = 0.5;
+  } else if (std::abs(angle) > 10.0 / 180.0 * PI) {
+      drive_msg.drive.speed = 1.0;
+  } else {
+      drive_msg.drive.speed = 1.5;
+  }
   // std::cout << "Publishing drive message with angle: " << angle << std::endl;
   drive_pub_.publish(drive_msg);
 }
@@ -649,7 +654,17 @@ bool RRT::check_occupied(int grid_x, int grid_y)
 {
   // This method checks if a grid cell is occupied when given the grid
   // coordinates
-  return occupancy_grid[grid_x][grid_y] == OCCUPIED;
+  bool is_occupied = false;
+  int buffer = 6; // number of grid cells as buffers on all sides of obstacle
+  for (int i = -buffer; i <= buffer; i++) {
+    for (int j = -buffer; j <= buffer; j++) {
+      if (occupancy_grid[grid_x + i][grid_y + j] == OCCUPIED) {
+        is_occupied = true;
+        break;
+      }
+    }
+  }
+  return is_occupied;
 }
 
 bool RRT::check_collision(Node &nearest_node, Node &new_node)
@@ -664,7 +679,7 @@ bool RRT::check_collision(Node &nearest_node, Node &new_node)
 
   bool collision = false;
   // TODO: fill in this method
-  const int NUM_CHECKPOINTS = 1000;
+  const int NUM_CHECKPOINTS = 500;
   double checkpoint_x, checkpoint_y;
   std::vector<int> grid_coords(2, 0);
   for (int i = 0; i <= NUM_CHECKPOINTS; i++)

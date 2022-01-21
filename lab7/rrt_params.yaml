@@ -15,7 +15,7 @@
 fov: 180
 min_goal_distance: 1.0
 steer_length: 0.30
-lookahead_distance: 0.6
+lookahead_distance: 0.5
 max_iteration: 100 
 gain: 2.0
 goal_distance: 0.1
